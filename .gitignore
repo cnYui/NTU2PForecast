@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+# 权重与训练产物不入库；参照权重来自 ReGenNet，可按 AGENTS.md 重新复制。
+save/
+# 指向 ReGenNet 的只读软链接
+/dataset
+/body_models
+results/forecasting/ntu120_label/ntu2p_xyz_seq_cache
+results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval
+*.pt
+*.png
+*.mp4
