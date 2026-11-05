@@ -1,0 +1,136 @@
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python train/train_ntu2p_jitflow.py --save_dir save/forecasting/ntu120_label/ntu2p_bandflow_subjval_B_s0_10000 --num_steps 10000 --seed 0 --save_interval 10000 --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --loss_scale_normalize --local_velocity_loss_weight 1.0 --ramp_mode saturate --ramp_saturate_frames 5 --dct_low_amplitude_loss_weight 1.0 --dct_mid_amplitude_loss_weight 1.0 --root_loss_weight 0.1 --inter_loss_weight 0.01 --ema_decay 0.999 --batch_size 8 --log_interval 100 --canonical_ab_fallback camera_x --foot_loss_weight 0.05 --kin_proj --leg_gait_loss_weight 0.5 --dct_mid_exclude_legs --loss_joint_subset hand2 --denoiser stg --self_cond --t_uniform_mix 0.5 --flow_kwargs {"local_k": 11} --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0
+Training NTU2P JiT flow denoiser=stg self_cond=True contact_graph=False causal_cross=False: params=4570427 scales=(0.14063,0.18843) device=cuda:0
+step[1]: loss[55.28315] endpoint[9.62028] flow[45.66288]
+step[100]: loss[40.04148] endpoint[5.95088] flow[34.09060]
+step[200]: loss[8.55430] endpoint[3.63498] flow[4.91932]
+step[300]: loss[8.98939] endpoint[4.05692] flow[4.93247]
+step[400]: loss[20.07979] endpoint[5.82451] flow[14.25528]
+step[500]: loss[9.02365] endpoint[3.03954] flow[5.98411]
+step[600]: loss[11.51153] endpoint[7.65019] flow[3.86134]
+step[700]: loss[5.70549] endpoint[2.97373] flow[2.73177]
+step[800]: loss[8.39244] endpoint[4.22330] flow[4.16914]
+step[900]: loss[8.25625] endpoint[4.17305] flow[4.08320]
+step[1000]: loss[4.41501] endpoint[3.21152] flow[1.20349]
+step[1100]: loss[6.29376] endpoint[4.41175] flow[1.88201]
+step[1200]: loss[8.52644] endpoint[4.75047] flow[3.77596]
+step[1300]: loss[7.59558] endpoint[4.98188] flow[2.61370]
+step[1400]: loss[4.09778] endpoint[2.97464] flow[1.12315]
+step[1500]: loss[5.51955] endpoint[2.91290] flow[2.60666]
+step[1600]: loss[7.43766] endpoint[6.27752] flow[1.16014]
+step[1700]: loss[5.96318] endpoint[3.89124] flow[2.07194]
+step[1800]: loss[5.18929] endpoint[3.45439] flow[1.73491]
+step[1900]: loss[5.46213] endpoint[4.01044] flow[1.45170]
+step[2000]: loss[7.31729] endpoint[5.69306] flow[1.62423]
+step[2100]: loss[3.49822] endpoint[2.45485] flow[1.04337]
+step[2200]: loss[6.16881] endpoint[3.52947] flow[2.63934]
+step[2300]: loss[6.47919] endpoint[3.04122] flow[3.43797]
+step[2400]: loss[4.65576] endpoint[3.71397] flow[0.94179]
+step[2500]: loss[3.97926] endpoint[2.50879] flow[1.47047]
+step[2600]: loss[4.59729] endpoint[3.51836] flow[1.07893]
+step[2700]: loss[2.72945] endpoint[1.98919] flow[0.74026]
+step[2800]: loss[3.97770] endpoint[2.54969] flow[1.42801]
+step[2900]: loss[15.12839] endpoint[3.51867] flow[11.60971]
+step[3000]: loss[26.70306] endpoint[3.30272] flow[23.40034]
+step[3100]: loss[11.76063] endpoint[4.63597] flow[7.12466]
+step[3200]: loss[3.82957] endpoint[2.42258] flow[1.40699]
+step[3300]: loss[2.90629] endpoint[2.06385] flow[0.84244]
+step[3400]: loss[5.30903] endpoint[3.50103] flow[1.80800]
+step[3500]: loss[3.31379] endpoint[2.48901] flow[0.82478]
+step[3600]: loss[5.80990] endpoint[4.16034] flow[1.64956]
+step[3700]: loss[16.43513] endpoint[14.52603] flow[1.90910]
+step[3800]: loss[4.55133] endpoint[2.56750] flow[1.98384]
+step[3900]: loss[6.73260] endpoint[5.82819] flow[0.90441]
+step[4000]: loss[5.59108] endpoint[4.28865] flow[1.30242]
+step[4100]: loss[3.40621] endpoint[2.40102] flow[1.00519]
+step[4200]: loss[3.22880] endpoint[2.38649] flow[0.84231]
+step[4300]: loss[7.93587] endpoint[6.36081] flow[1.57506]
+step[4400]: loss[13.94207] endpoint[6.57030] flow[7.37177]
+step[4500]: loss[3.01478] endpoint[1.95667] flow[1.05810]
+step[4600]: loss[4.65063] endpoint[2.86318] flow[1.78745]
+step[4700]: loss[3.06012] endpoint[2.09323] flow[0.96689]
+step[4800]: loss[12.91331] endpoint[6.99728] flow[5.91603]
+step[4900]: loss[7.12366] endpoint[3.91167] flow[3.21199]
+step[5000]: loss[2.26185] endpoint[1.61410] flow[0.64775]
+step[5100]: loss[4.94813] endpoint[3.06240] flow[1.88573]
+step[5200]: loss[4.15736] endpoint[2.85577] flow[1.30159]
+step[5300]: loss[6.93851] endpoint[4.30472] flow[2.63379]
+step[5400]: loss[6.37985] endpoint[4.23816] flow[2.14169]
+step[5500]: loss[7.37646] endpoint[3.07825] flow[4.29821]
+step[5600]: loss[2.55351] endpoint[1.80802] flow[0.74549]
+step[5700]: loss[5.17219] endpoint[4.00839] flow[1.16381]
+step[5800]: loss[4.90637] endpoint[4.00390] flow[0.90246]
+step[5900]: loss[26.31473] endpoint[7.34254] flow[18.97219]
+step[6000]: loss[1.59953] endpoint[1.08680] flow[0.51272]
+step[6100]: loss[5.47708] endpoint[3.96476] flow[1.51232]
+step[6200]: loss[5.71011] endpoint[3.59102] flow[2.11909]
+step[6300]: loss[4.02032] endpoint[2.86063] flow[1.15969]
+step[6400]: loss[7.09278] endpoint[6.11727] flow[0.97551]
+step[6500]: loss[6.23769] endpoint[4.66914] flow[1.56855]
+step[6600]: loss[9.03037] endpoint[3.42745] flow[5.60291]
+step[6700]: loss[4.99417] endpoint[3.47134] flow[1.52283]
+step[6800]: loss[1.79608] endpoint[1.14722] flow[0.64886]
+step[6900]: loss[5.83602] endpoint[3.80410] flow[2.03192]
+step[7000]: loss[3.58414] endpoint[2.58001] flow[1.00412]
+step[7100]: loss[4.45353] endpoint[3.14303] flow[1.31050]
+step[7200]: loss[2.83625] endpoint[2.15070] flow[0.68555]
+step[7300]: loss[8.12778] endpoint[5.25535] flow[2.87244]
+step[7400]: loss[3.74996] endpoint[1.85700] flow[1.89296]
+step[7500]: loss[9.46907] endpoint[4.91728] flow[4.55179]
+step[7600]: loss[2.01352] endpoint[1.57039] flow[0.44313]
+step[7700]: loss[4.10933] endpoint[3.15813] flow[0.95119]
+step[7800]: loss[1.74522] endpoint[1.29154] flow[0.45369]
+step[7900]: loss[5.15501] endpoint[4.49687] flow[0.65814]
+step[8000]: loss[7.61863] endpoint[4.04528] flow[3.57335]
+step[8100]: loss[3.80344] endpoint[2.48450] flow[1.31894]
+step[8200]: loss[2.22510] endpoint[1.33945] flow[0.88565]
+step[8300]: loss[4.14511] endpoint[2.65694] flow[1.48817]
+step[8400]: loss[10.83695] endpoint[3.42103] flow[7.41591]
+step[8500]: loss[4.79381] endpoint[3.21245] flow[1.58136]
+step[8600]: loss[4.78725] endpoint[3.46907] flow[1.31818]
+step[8700]: loss[4.01704] endpoint[2.96579] flow[1.05125]
+step[8800]: loss[7.53724] endpoint[5.16607] flow[2.37118]
+step[8900]: loss[3.50991] endpoint[2.36678] flow[1.14313]
+step[9000]: loss[2.56099] endpoint[1.76421] flow[0.79678]
+step[9100]: loss[6.45359] endpoint[4.92192] flow[1.53167]
+step[9200]: loss[2.25013] endpoint[1.43607] flow[0.81406]
+step[9300]: loss[5.38627] endpoint[3.57979] flow[1.80648]
+step[9400]: loss[4.53075] endpoint[3.68294] flow[0.84781]
+step[9500]: loss[8.48852] endpoint[5.69483] flow[2.79368]
+step[9600]: loss[2.48601] endpoint[1.65423] flow[0.83178]
+step[9700]: loss[3.91367] endpoint[2.78397] flow[1.12969]
+step[9800]: loss[9.28794] endpoint[6.33945] flow[2.94849]
+step[9900]: loss[18.91481] endpoint[3.57939] flow[15.33541]
+step[10000]: loss[2.98620] endpoint[1.99875] flow[0.98745]
+Training finished. final_checkpoint=save/forecasting/ntu120_label/ntu2p_bandflow_subjval_B_s0_10000/model000010000.pt
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_v2.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_subjval_B_s0_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/subjval/bandflow_s0/B_ode0.json --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --split val --interaction_metrics --flow_readout sample --flow_temperature 0.0 --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0
+{"model": {"xyz_mse": 0.02128603448148681, "xyz_mae": 0.08412356919001954, "mpjpe": 0.17319208962714625}, "gate": true}
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_v2.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_subjval_B_s0_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/subjval/bandflow_s0/B_median16.json --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --split val --interaction_metrics --flow_readout median --flow_temperature 1.0 --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0
+{"model": {"xyz_mse": 0.020477698429634695, "xyz_mae": 0.08383611830984533, "mpjpe": 0.17245466814108706}, "gate": true}
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_v2.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_subjval_B_s0_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/subjval/bandflow_s0/B_median16t05.json --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --split val --interaction_metrics --flow_readout median --flow_temperature 0.5 --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0
+{"model": {"xyz_mse": 0.020815686575374623, "xyz_mae": 0.08345827013857451, "mpjpe": 0.17171594271293053}, "gate": true}
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_v2.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_subjval_B_s0_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/subjval/bandflow_s0/B_endpoint.json --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --split val --interaction_metrics --flow_readout endpoint --flow_temperature 1.0 --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0
+{"model": {"xyz_mse": 0.019757070748308892, "xyz_mae": 0.08292981418158844, "mpjpe": 0.17025971611743032}, "gate": true}
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_jitflow_samples.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_subjval_B_s0_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/subjval/bandflow_s0/B_samples.json --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval
+sample 0 mpjpe 0.21339 excess_antic 0.047011765420883984
+sample 1 mpjpe 0.20897 excess_antic 0.0585010678843615
+sample 2 mpjpe 0.21509 excess_antic 0.028349573144261075
+sample 3 mpjpe 0.20919 excess_antic 0.04629148756110915
+sample 4 mpjpe 0.21493 excess_antic 0.05251431441254189
+sample 5 mpjpe 0.21186 excess_antic 0.035960814937849334
+sample 6 mpjpe 0.21293 excess_antic 0.05316167985446035
+sample 7 mpjpe 0.21566 excess_antic 0.0646080181675977
+sample 8 mpjpe 0.21257 excess_antic 0.05527067206445968
+sample 9 mpjpe 0.21289 excess_antic 0.0744645170829186
+sample 10 mpjpe 0.20969 excess_antic 0.04269354265715797
+sample 11 mpjpe 0.21020 excess_antic 0.04988225509441718
+sample 12 mpjpe 0.21079 excess_antic 0.08037035815824084
+sample 13 mpjpe 0.21284 excess_antic 0.05162985720493354
+sample 14 mpjpe 0.20836 excess_antic 0.03876103107898101
+sample 15 mpjpe 0.21207 excess_antic 0.042115553074158325
+{"xyz_mse": 0.029132196451593866, "xyz_mae": 0.10316322380412928, "mpjpe": 0.21196501223212072, "primary_excess_antic": 0.051349156737395756, "jerk_body": 28.836762827529448}

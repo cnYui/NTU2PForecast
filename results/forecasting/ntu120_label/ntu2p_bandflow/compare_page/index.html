@@ -1,0 +1,480 @@
+<title>NTU2P 扩散预测对比</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* 版式：单栏技术报告；总览图通栏，逐级对照为"阶段 | FD2 | 扩散"三列网格，视频单列。
+     颜色：A 蓝 / B 红沿用视频里的人物色；青绿只标"本轮新换上的部件"，灰标"被替换的旧部件"。 */
+  :root {
+    --bg: #F5F7FA;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --accent: #0E7C74;
+    --accent-tint: #E2F3F1;
+    --old: #8A94A3;
+    --old-tint: #EEF0F3;
+    --good: #1F7A3A;
+    --bad: #B4381F;
+    --person-a: #2F6BFF;
+    --person-b: #E5484D;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+      --good: #5CC27A; --bad: #F08A6E; --person-a: #6C97FF; --person-b: #FF7A7E; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+    --good: #5CC27A; --bad: #F08A6E; --person-a: #6C97FF; --person-b: #FF7A7E; color-scheme: dark;
+  }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.7;
+  }
+  .wrap {
+    max-width: 1080px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 56px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); font-weight: 700; }
+  h2 { font-size: var(--step-2); font-weight: 700; }
+  h3 { font-size: var(--step-1); font-weight: 500; }
+  p { margin: 0; max-width: 68ch; }
+  section { display: grid; gap: 20px; min-width: 0; }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .mono, code { font-family: var(--font-mono); font-size: 0.86em; }
+  .lede { color: var(--muted); }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px; font-size: var(--step--1); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; width: fit-content;
+  }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+  /* 关键数字 */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .stat { background: var(--panel); padding: 16px 18px; display: grid; gap: 4px; }
+  .stat .k { font-size: var(--step--1); color: var(--muted); }
+  .stat .v { font-size: var(--step-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .d { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .up { color: var(--good); } .down { color: var(--bad); }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* 图 */
+  figure { margin: 0; display: grid; gap: 12px; min-width: 0; }
+  figcaption { font-size: var(--step--1); color: var(--muted); max-width: 80ch; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px; }
+  svg.diagram { display: block; width: 100%; min-width: 820px; height: auto; color: var(--fg); font-family: var(--font-body); }
+  svg .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+  svg .bx-old { fill: var(--old-tint); stroke: var(--old); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  svg .bx-new { fill: var(--accent-tint); stroke: var(--accent); stroke-width: 1.6; }
+  svg .t1 { font-size: 13px; font-weight: 500; fill: currentColor; }
+  svg .t2 { font-size: 11px; fill: var(--muted); }
+  svg .lane { font-size: 13px; font-weight: 700; fill: currentColor; }
+  svg .lane-sub { font-size: 11px; fill: var(--muted); }
+  svg .ar { stroke: var(--muted); stroke-width: 1.3; fill: none; }
+  svg .ar-new { stroke: var(--accent); stroke-width: 1.6; fill: none; }
+  svg .same { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
+  svg .note { font-size: 11px; fill: var(--muted); }
+  svg .note-new { font-size: 12px; fill: var(--accent); font-weight: 500; }
+  svg .head { fill: var(--muted); } svg .head-new { fill: var(--accent); }
+
+  /* 逐级对照 */
+  .cmp { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) minmax(0, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--line); gap: 1px; }
+  .cmp > div { background: var(--panel); padding: 12px 14px; min-width: 0; }
+  .cmp .hd { font-size: var(--step--1); color: var(--muted); letter-spacing: 0.04em; background: var(--bg); }
+  .cmp .stage { font-weight: 500; }
+  .cmp .stage small { display: block; color: var(--muted); font-weight: 400; font-size: var(--step--1); }
+  .cmp .both { grid-column: span 2; color: var(--muted); }
+  .cmp .old { background: var(--old-tint); }
+  .cmp .new { background: var(--accent-tint); box-shadow: inset 3px 0 0 var(--accent); }
+  .cmp p + p { margin-top: 4px; }
+  .tag { display: inline-block; font-size: 0.75rem; border-radius: 4px; padding: 0 6px; margin-right: 6px; border: 1px solid currentColor; line-height: 1.6; }
+  .tag.new { color: var(--accent); } .tag.old { color: var(--old); }
+  @media (max-width: 720px) {
+    .cmp { grid-template-columns: minmax(0, 1fr); }
+    .cmp .hd { display: none; }
+    .cmp .both { grid-column: auto; }
+    .cmp .stage { background: var(--bg); }
+    .cmp .old::before { content: "FD2"; display: block; font-size: var(--step--1); color: var(--muted); }
+    .cmp .new::before { content: "扩散 BR"; display: block; font-size: var(--step--1); color: var(--accent); }
+  }
+
+  /* 表 */
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.hl td { background: var(--accent-tint); }
+  td.wrap { white-space: normal; text-align: left; min-width: 14rem; }
+
+  ul.notes { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 80ch; }
+
+  /* 视频 */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: var(--step--1); color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .videos { display: grid; gap: 28px; }
+  .clip { display: grid; gap: 8px; min-width: 0; }
+  .clip video { width: 100%; height: auto; aspect-ratio: 4 / 1; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #FFFFFF; display: block; }
+  .clip .meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: var(--step--1); color: var(--muted); }
+  .clip .meta b { color: var(--fg); font-weight: 500; font-size: var(--step-0); }
+  .verdict { font-weight: 500; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+  button {
+    font: inherit; font-size: var(--step--1); color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 14px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible, video:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  footer { font-size: var(--step--1); color: var(--muted); display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+
+<main class="wrap">
+  <header style="display:grid; gap:14px">
+    <div class="eyebrow">NTU120 双人动作预测 · 观测 10 帧 → 预测 50 帧（2.5 s） · 2026-11-04</div>
+    <h1>NTU2P 扩散预测对比</h1>
+    <p class="lede">把 FD2 的 Mixer 主干和输出头换成扩散去噪器，最终预测由多步采样生成；再在输出端加一层落脚规划，让脚着地时钉住、被身体带开时抬脚迈步。下面依次是：替换了哪几级、两个模型逐级怎么走、精度和平滑度变化多少、腿怎么迈起来，以及同一批案例的并排视频。</p>
+    <div class="status" id="test-status">受试者留出 val 与原协议 test 均已完成（各 3 seed） · 主线 = 扩散 BR:ode0 + 落脚规划层</div>
+  </header>
+
+  <section aria-labelledby="s-numbers">
+    <h2 id="s-numbers">提升多少</h2>
+    <div class="stats">
+      <div class="stat"><span class="k">mpjpe（平均关节误差）</span><span class="v up">−2.24%</span><span class="d">0.1722 → 0.1683 m，3 个 seed 都下降</span></div>
+      <div class="stat"><span class="k">xyz_mae</span><span class="v up">−2.7%</span><span class="d">0.0841 → 0.0818</span></div>
+      <div class="stat"><span class="k">jerk（抖动）</span><span class="v up">−23%</span><span class="d">20.4 → 15.8 m/s³</span></div>
+      <div class="stat"><span class="k">xyz_mse</span><span class="v down">+2.8%</span><span class="d">0.0194 → 0.0199，你授权放宽到 +5%</span></div>
+    </div>
+    <p>数字来自受试者留出验证集（247 个窗口，验证集的人不出现在训练集），各 3 个 seed、10000 step、取权重 EMA 的终点，参照是同 3 个 seed 的 FD2。<b>原协议 test 上精度收益小得多</b>：主线（加落脚规划）mpjpe 只比 FD2 低 0.45%，xyz_mse 高 4.8%；滑行减少 85% 在 test 上同样成立。完整表在下面的"数字明细"。</p>
+  </section>
+
+  <section aria-labelledby="s-overview">
+    <h2 id="s-overview">替换了什么</h2>
+    <figure>
+      <div class="scroll">
+        <svg class="diagram" viewBox="0 0 1125 300" role="img" aria-label="两条流水线对照：FD2 与扩散 BR 的第 1、5、6、7、8 级相同；FD2 的第 2 到 4 级（观测 DCT token、InterMixer、输出头）被换成扩散的时空 token、STG 去噪器和预测干净系数，并在这三级上循环 20 步采样；扩散一侧在最后多一级落脚规划层。">
+          <defs>
+            <marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head"/></marker>
+            <marker id="ahn" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head-new"/></marker>
+          </defs>
+          <!-- 泳道标题 -->
+          <text class="lane" x="0" y="68">FD2</text>
+          <text class="lane-sub" x="0" y="86">DCT 回归</text>
+          <text class="lane-sub" x="0" y="102">一次前向</text>
+          <text class="lane" x="0" y="208">扩散 BR</text>
+          <text class="lane-sub" x="0" y="226">ode0 读出</text>
+          <text class="lane-sub" x="0" y="242">20 步采样</text>
+
+          <!-- 相同阶段的连接线（第 1、5、6、7、8 级） -->
+          <line class="same" x1="156.5" y1="101" x2="156.5" y2="185"/><text class="note" x="162" y="147">相同</text>
+          <line class="same" x1="608.5" y1="101" x2="608.5" y2="185"/><text class="note" x="614" y="147">11 阶</text>
+          <line class="same" x1="721.5" y1="101" x2="721.5" y2="185"/><text class="note" x="727" y="147">相同</text>
+          <line class="same" x1="834.5" y1="101" x2="834.5" y2="185"/><text class="note" x="840" y="147">相同</text>
+          <line class="same" x1="947.5" y1="101" x2="947.5" y2="185"/><text class="note" x="953" y="147">相同</text>
+          <text class="note-new" x="382" y="140" text-anchor="middle">第 2–4 级整体替换</text>
+
+          <!-- FD2 泳道 -->
+          <rect class="bx" x="105" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="156.5" y="69" text-anchor="middle">① 规范化</text><text class="t2" x="156.5" y="87" text-anchor="middle">朝向对方系</text>
+          <rect class="bx-old" x="218" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="269.5" y="69" text-anchor="middle">② 观测 DCT</text><text class="t2" x="269.5" y="87" text-anchor="middle">30 个频率 token</text>
+          <rect class="bx-old" x="331" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="382.5" y="69" text-anchor="middle">③ Mixer ×6</text><text class="t2" x="382.5" y="87" text-anchor="middle">一次前向</text>
+          <rect class="bx-old" x="444" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="495.5" y="69" text-anchor="middle">④ 输出头</text><text class="t2" x="495.5" y="87" text-anchor="middle">root 8 · local 20</text>
+          <rect class="bx" x="557" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="608.5" y="69" text-anchor="middle">⑤ IDCT×ramp</text><text class="t2" x="608.5" y="87" text-anchor="middle">首帧残差 0</text>
+          <rect class="bx" x="670" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="721.5" y="69" text-anchor="middle">⑥ 组装 55 关节</text><text class="t2" x="721.5" y="87" text-anchor="middle">刚体手</text>
+          <rect class="bx" x="783" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="834.5" y="69" text-anchor="middle">⑦ + 观测末帧</text><text class="t2" x="834.5" y="87" text-anchor="middle">旋回相机系</text>
+          <rect class="bx" x="896" y="45" width="103" height="56" rx="6"/>
+          <text class="t1" x="947.5" y="69" text-anchor="middle">⑧ 骨架投影</text><text class="t2" x="947.5" y="87" text-anchor="middle">骨长恒定</text>
+          <line class="ar" x1="208" y1="73" x2="217" y2="73" marker-end="url(#ah)"/>
+          <line class="ar" x1="321" y1="73" x2="330" y2="73" marker-end="url(#ah)"/>
+          <line class="ar" x1="434" y1="73" x2="443" y2="73" marker-end="url(#ah)"/>
+          <line class="ar" x1="547" y1="73" x2="556" y2="73" marker-end="url(#ah)"/>
+          <line class="ar" x1="660" y1="73" x2="669" y2="73" marker-end="url(#ah)"/>
+          <line class="ar" x1="773" y1="73" x2="782" y2="73" marker-end="url(#ah)"/>
+          <line class="ar" x1="886" y1="73" x2="895" y2="73" marker-end="url(#ah)"/>
+
+          <!-- 扩散泳道 -->
+          <rect class="bx" x="105" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="156.5" y="209" text-anchor="middle">① 规范化</text><text class="t2" x="156.5" y="227" text-anchor="middle">朝向对方系</text>
+          <rect class="bx-new" x="218" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="269.5" y="209" text-anchor="middle">② 时空 token</text><text class="t2" x="269.5" y="227" text-anchor="middle">观测 + 当前状态</text>
+          <rect class="bx-new" x="331" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="382.5" y="209" text-anchor="middle">③ STG 去噪 ×6</text><text class="t2" x="382.5" y="227" text-anchor="middle">每步调用一次</text>
+          <rect class="bx-new" x="444" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="495.5" y="209" text-anchor="middle">④ 干净系数 x̂</text><text class="t2" x="495.5" y="227" text-anchor="middle">root 8 · local 11</text>
+          <rect class="bx" x="557" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="608.5" y="209" text-anchor="middle">⑤ IDCT×ramp</text><text class="t2" x="608.5" y="227" text-anchor="middle">只含 ≤2 Hz</text>
+          <rect class="bx" x="670" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="721.5" y="209" text-anchor="middle">⑥ 组装 55 关节</text><text class="t2" x="721.5" y="227" text-anchor="middle">手指随手腕</text>
+          <rect class="bx" x="783" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="834.5" y="209" text-anchor="middle">⑦ + 观测末帧</text><text class="t2" x="834.5" y="227" text-anchor="middle">旋回相机系</text>
+          <rect class="bx" x="896" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="947.5" y="209" text-anchor="middle">⑧ 骨架投影</text><text class="t2" x="947.5" y="227" text-anchor="middle">骨长恒定</text>
+          <line class="ar" x1="208" y1="213" x2="217" y2="213" marker-end="url(#ah)"/>
+          <line class="ar-new" x1="321" y1="213" x2="330" y2="213" marker-end="url(#ahn)"/>
+          <line class="ar-new" x1="434" y1="213" x2="443" y2="213" marker-end="url(#ahn)"/>
+          <line class="ar" x1="547" y1="213" x2="556" y2="213" marker-end="url(#ah)"/>
+          <line class="ar" x1="660" y1="213" x2="669" y2="213" marker-end="url(#ah)"/>
+          <line class="ar" x1="773" y1="213" x2="782" y2="213" marker-end="url(#ah)"/>
+          <line class="ar" x1="886" y1="213" x2="895" y2="213" marker-end="url(#ah)"/>
+          <!-- 第 ⑨ 级：落脚规划层（只在扩散一侧，不训练） -->
+          <rect class="bx-new" x="1012" y="185" width="103" height="56" rx="6"/>
+          <text class="t1" x="1063.5" y="209" text-anchor="middle">⑨ 落脚规划</text><text class="t2" x="1063.5" y="227" text-anchor="middle">锁脚 + 迈步</text>
+          <line class="ar-new" x1="999" y1="213" x2="1011" y2="213" marker-end="url(#ahn)"/>
+          <text class="note-new" x="1063.5" y="262" text-anchor="middle">新增，不训练</text>
+          <!-- 采样循环：x̂ → Heun 更新状态 → 回到 token -->
+          <path class="ar-new" d="M495.5,241 V268 H269.5 V243" marker-end="url(#ahn)"/>
+          <text class="note-new" x="382.5" y="288" text-anchor="middle">Heun 更新状态 z，循环 20 步（t 从 0 到 0.95）</text>
+          <text class="note" x="218" y="282" text-anchor="end">起点 z₀ = 0</text>
+        </svg>
+      </div>
+      <figcaption>两条流水线的第 ①⑤⑥⑦⑧ 级相同（⑤ 的局部 DCT 从 20 阶减到 11 阶）。FD2 的 ②③④（虚线灰框）被整体换成扩散的 ②③④（青绿框），并在这三级上循环 20 步：每一步去噪器读入当前状态，预测干净系数 x̂，再用 Heun 法把状态推进一步。最后一步的 x̂ 解码后，再经第 ⑨ 级落脚规划层把漂移的脚改成锁定加迈步（见"让腿真正迈步"）。</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="s-stages">
+    <h2 id="s-stages">逐级对照</h2>
+    <p>张量形状中 B 是 batch，2 是两个人（A 施动、B 受动），55 是 SMPL-X 关节。灰底是 FD2 被替换的部分，青绿底是扩散模型新换上的部分。</p>
+    <div class="cmp" role="table" aria-label="FD2 与扩散 BR 逐级对照">
+      <div class="hd" role="columnheader">阶段</div>
+      <div class="hd" role="columnheader">FD2（之前的 DCT 模型）</div>
+      <div class="hd" role="columnheader">扩散 BR（当前模型）</div>
+
+      <div class="stage">输入</div>
+      <div class="both">观测 10 帧 <code>[B,10,2,55,3]</code> + 26 类动作标签 <code>[B]</code></div>
+
+      <div class="stage">① 规范化</div>
+      <div class="both">双人场景系：原点在两人 pelvis 中点，+X 是 A→B 水平连线，+Y 向上；B 再绕竖直轴转 180°，使"走向对方"对两人同号。参数只取自观测，可精确反变换。</div>
+
+      <div class="stage">② 输入编码<small>被替换</small></div>
+      <div class="old"><p>观测位移 <code>x_t − x_last</code> 做 DCT，取前 30 阶，每人 30 个频率 token，宽 256。</p><p>末帧姿态、两人相对几何、动作与角色嵌入广播相加。</p></div>
+      <div class="new"><p><span class="tag new">新</span>先把当前状态 z（DCT 系数）解码回 50 帧时域，与 10 帧观测拼成 60 帧。</p><p>按 2 人 × 5 部位（躯干、左右臂、左右腿）× 12 个 5 帧时间块切成 <b>120 个 token</b>，宽 192；输入通道再拼上一步的预测 x̂（自条件）。</p></div>
+
+      <div class="stage">③ 主干<small>被替换</small></div>
+      <div class="old"><p>InterMixer ×6：沿频率 token 的时间混合 → 动作 FiLM 调制的通道 MLP → 读取对方 token 的人物混合。</p><p><b>只前向一次</b>，直接回归出答案。</p></div>
+      <div class="new"><p><span class="tag new">新</span>STG Transformer ×6：注意力在全部 120 个 token 之间进行，带"部位对"与"相对时间"偏置；adaLN-Zero 注入噪声时刻 t、动作和角色；qk-norm、SwiGLU。</p><p><b>每个采样步调用一次</b>，20 步 Heun 共 39 次前向。</p></div>
+
+      <div class="stage">④ 输出<small>被替换</small></div>
+      <div class="old"><p>零初始化的输出头：root 取前 8 阶、局部取前 20 阶 DCT（到 3.8 Hz），外加双手轴角。</p><p>腿部专用流单独预测 8 个腿关节。</p></div>
+      <div class="new"><p><span class="tag new">新</span>每个部位的输出头给出未来 10 个时间块的时域残差，再最小二乘投回 DCT，得到干净系数 x̂：root 8 阶、局部 <b>11 阶（≤2 Hz）</b>。</p><p>腿部流保留，但多读一份带噪声的腿系数。然后用 v = (x̂ − z)/(1 − t) 把状态推进一步。</p></div>
+
+      <div class="stage">⑤ 解码</div>
+      <div class="both">IDCT 回 50 帧，再乘 ramp <code>[0, .2, .4, .6, .8, 1, …]</code>，使首帧残差严格为 0。扩散模型只到 11 阶：GT 在 2 Hz 以上的能量与步态频段相当，主要是骨架拟合抖动，扩散会把它学成抖动。</div>
+
+      <div class="stage">⑥⑦⑧ 组装与投影</div>
+      <div class="both">组装 55 关节（FD2 用手轴角转刚体手；扩散模型的手指先随手腕平移，手的转向由两个指根在投影里求出）→ 残差加回观测末帧、旋回相机系 → 可微骨架投影（骨长恒定、手为刚体）。输出 <code>[B,50,2,55,3]</code>。</div>
+
+      <div class="stage">⑨ 落脚规划<small>新增</small></div>
+      <div class="old"><p>无。脚跟着骨盆一起平移，步行时整段滑行。</p></div>
+      <div class="new"><p><span class="tag new">新</span>不训练，只改双腿的膝、踝、脚掌：脚着地时钉住；被身体带开超过 0.16 m 时抬脚，按步长自适应 5–12 帧划弧，落到预测位置前方 0.10 m；同一时刻只有一只脚在空中。膝用两骨 IK 重解，骨长不变，上半身逐位不变。</p></div>
+
+      <div class="stage">训练目标</div>
+      <div class="old"><p>一个确定性损失配方：位置、速度、分频带幅度、脚接触、腿步态、投影前辅助项。</p></div>
+      <div class="new"><p><span class="tag new">新</span>三项相加：t=0 时施加同一套 FD2 配方；随机 t 上的 JiT 去噪损失（x 预测、v-loss）；以及 t∈[0.5, 1) 的去噪估计也施加 FD2 配方，因为最后一步的 x̂ 就是交付的预测。</p></div>
+
+      <div class="stage">规模</div>
+      <div class="old">3.65 M 参数，推理 1 次前向</div>
+      <div class="new">4.57 M 参数，采样 39 次去噪器前向</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-detail">
+    <h2 id="s-detail">数字明细</h2>
+    <h3>受试者留出 val，3 seed 均值 ± 标准差</h3>
+    <div class="table">
+      <table>
+        <thead><tr><th>指标</th><th>FD2</th><th>扩散 BR:ode0</th><th>变化</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr class="hl"><td>mpjpe（m）</td><td>0.17220 ± 0.00056</td><td>0.16835 ± 0.00088</td><td class="up">−2.24%</td><td class="wrap">逐 seed −1.81 / −2.42 / −2.47%</td></tr>
+          <tr><td>xyz_mae</td><td>0.08412 ± 0.00012</td><td>0.08181 ± 0.00035</td><td class="up">−2.7%</td><td class="wrap"></td></tr>
+          <tr><td>xyz_mse</td><td>0.01938 ± 0.00030</td><td>0.01992 ± 0.00027</td><td class="down">+2.8%</td><td class="wrap">86% 的增量来自最差的 10 个窗口（采样选错了整体走向）</td></tr>
+          <tr><td>jerk（m/s³）</td><td>20.40</td><td>15.80</td><td class="up">−23%</td><td class="wrap">GT 含拟合抖动，为 307</td></tr>
+          <tr><td>1.2–2 Hz 摆动能量（相对 GT）</td><td>0.642</td><td>0.257</td><td class="down">−60%</td><td class="wrap">四肢摆得更少，平滑有一部分来自这里</td></tr>
+          <tr><td>步数（GT 2.29）</td><td>1.45</td><td>1.37</td><td class="down">−0.08</td><td class="wrap"></td></tr>
+          <tr><td>滑行帧比</td><td>0.180</td><td>0.191</td><td class="down">+0.011</td><td class="wrap"></td></tr>
+          <tr><td>穿地比例</td><td>0.0669</td><td>0.0668</td><td>持平</td><td class="wrap"></td></tr>
+          <tr><td>接触前超额后退（m）</td><td>0.0247</td><td>0.0308</td><td class="down">变差</td><td class="wrap">"手没碰到就躲"没有改善</td></tr>
+          <tr><td>骨长误差</td><td>0</td><td>0</td><td>—</td><td class="wrap"></td></tr>
+          <tr id="test-row"><td>原协议 test mpjpe</td><td>0.18052 ± 0.00045</td><td>0.17906 ± 0.00061</td><td class="up">−0.81%</td><td class="wrap">逐 seed −1.33 / −0.48 / −0.60%；test 上的收益比 val 小得多</td></tr>
+          <tr><td>原协议 test xyz_mse</td><td>0.02774</td><td>0.02888</td><td class="down">+4.1%</td><td class="wrap"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>每一步改动带来了什么（seed0，同一套读出 ode0）</h3>
+    <div class="table">
+      <table>
+        <thead><tr><th>配置</th><th>mpjpe 变化</th><th>xyz_mse 变化</th><th>jerk</th><th>改了什么</th></tr></thead>
+        <tbody>
+          <tr><td>FD2</td><td>—</td><td>—</td><td>20.4</td><td class="wrap">之前的 DCT 回归主线</td></tr>
+          <tr><td>J3（上一轮扩散）</td><td class="up">−2.12%</td><td class="down">+2.3%</td><td class="down">33.7</td><td class="wrap">局部 DCT 20 阶，样本会复现 GT 的高频拟合抖动</td></tr>
+          <tr><td>B</td><td class="down">+0.56%</td><td class="down">+10.3%</td><td class="up">17.3</td><td class="wrap">局部 DCT 减到 11 阶：抖动降了，精度也掉了</td></tr>
+          <tr class="hl"><td>BR（当前）</td><td class="up">−1.81%</td><td class="down">+4.4%</td><td class="up">15.4</td><td class="wrap">再在采样最后几步也施加 FD2 损失：精度补回来</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="notes">
+      <li>按原定的 mse 门限（只容许 +0.5%），扩散模型不通过；你授权只对 BR:ode0 放宽到 +5% 后，3 seed 均值通过。</li>
+      <li>同一模型的"一次前向"读出（t=0）按原门限全部通过（mse −2.2%，jerk 18.4），但它不是采样生成的，只作记录。</li>
+      <li>随机样本本身的质量没有提升：单样本的 Energy Score 约 0.21，不如直接从训练集抽真实残差（0.128）。</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-legs">
+    <h2 id="s-legs">让腿真正迈步</h2>
+    <p>扩散模型的数字比 FD2 好，但视频里腿在漂移：脚跟着骨盆一起平移，没有真正迈步。诊断表明这不是 DCT 表示的问题（真实动作经 11 阶 DCT 编解码后照样正常迈步），而是模型把"迈哪只脚、什么时候落地"的不同可能平均掉了。所以在输出端加了一层落脚规划，替模型选定落脚时刻和落点。</p>
+    <figure>
+      <div class="scroll">
+        <svg class="diagram" viewBox="0 0 900 230" role="img" aria-label="每只脚的状态机：着地时锁定；被身体带开超过 0.16 米且另一只脚着地时进入摆动；摆动 5 到 12 帧后落到预测位置前方 0.1 米，回到着地；预测里脚抬得很高时进入自由状态，跟随原预测。" style="min-width: 720px">
+          <defs>
+            <marker id="ah2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head"/></marker>
+            <marker id="ahn2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head-new"/></marker>
+          </defs>
+          <rect class="bx-new" x="60" y="60" width="180" height="70" rx="8"/>
+          <text class="t1" x="150" y="90" text-anchor="middle">着地（锁定）</text><text class="t2" x="150" y="110" text-anchor="middle">踝和脚掌钉在原地</text>
+          <rect class="bx-new" x="420" y="60" width="180" height="70" rx="8"/>
+          <text class="t1" x="510" y="90" text-anchor="middle">摆动</text><text class="t2" x="510" y="110" text-anchor="middle">5–12 帧，弧高 7 cm</text>
+          <rect class="bx" x="690" y="60" width="180" height="70" rx="8"/>
+          <text class="t1" x="780" y="90" text-anchor="middle">自由</text><text class="t2" x="780" y="110" text-anchor="middle">跟随原预测（踢腿等）</text>
+          <path class="ar-new" d="M240,80 H419" marker-end="url(#ahn2)"/>
+          <text class="note-new" x="330" y="70" text-anchor="middle">离锁定点 &gt; 0.16 m</text>
+          <text class="note" x="330" y="98" text-anchor="middle">且另一只脚着地</text>
+          <path class="ar-new" d="M510,130 V175 H150 V131" marker-end="url(#ahn2)"/>
+          <text class="note-new" x="330" y="195" text-anchor="middle">落到预测位置前方 0.10 m</text>
+          <path class="ar" d="M240,115 C420,160 600,160 780,131" marker-end="url(#ah2)"/>
+          <text class="note" x="610" y="160" text-anchor="middle">预测踝抬高 &gt; 0.20 m</text>
+          <path class="ar" d="M780,60 C600,15 300,15 150,59" marker-end="url(#ah2)"/>
+          <text class="note" x="465" y="28" text-anchor="middle">回落到静止高度 + 0.05 m 内，就地着地</text>
+        </svg>
+      </div>
+      <figcaption>每个人的每只脚一个状态机，逐帧推进。参数全部来自训练集真实动作的步态统计（离地时脚在骨盆后 0.16 m、落地在前 0.10 m、抬脚 7 cm、摆动脚平均速度约为身体速度的 2.85 倍），没有在验证集上调。最后用两骨 IK 重解膝盖。</figcaption>
+    </figure>
+    <div class="table">
+      <table>
+        <thead><tr><th>受试者留出 val，3 seed 均值</th><th>滑行帧比</th><th>左右脚交替相关</th><th>步数</th><th>着地时脚速</th><th>穿地</th><th>jerk</th><th>mpjpe</th></tr></thead>
+        <tbody>
+          <tr><td>真实动作（GT）</td><td>0.034</td><td>−0.39</td><td>2.29</td><td>0.10</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>FD2</td><td>0.180</td><td>−0.19</td><td>1.45</td><td>0.199</td><td>0.067</td><td>20.4</td><td>0.1722</td></tr>
+          <tr><td>扩散 BR:ode0</td><td>0.191</td><td>−0.08</td><td>1.37</td><td>0.217</td><td>0.067</td><td>15.8</td><td>0.1683</td></tr>
+          <tr class="hl"><td>扩散 BR:ode0 + 落脚规划</td><td class="up">0.032</td><td>−0.245</td><td class="up">1.69</td><td class="up">0.175</td><td class="up">0.028</td><td>21.8</td><td>0.1688</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>原协议 test（1253 条，3 seed，每种读出只评一次）</h3>
+    <div class="table">
+      <table>
+        <thead><tr><th>行</th><th>mpjpe</th><th>xyz_mse</th><th>xyz_mae</th><th>滑行帧比</th><th>步数</th><th>穿地</th><th>jerk</th><th>1.2–2 Hz 摆动</th><th>漏接触</th></tr></thead>
+        <tbody>
+          <tr><td>FD2（上一代主线）</td><td>0.18052</td><td>0.02774</td><td>0.08749</td><td>0.203</td><td>1.46</td><td>0.041</td><td>20.7</td><td>0.604</td><td>404</td></tr>
+          <tr><td>扩散 BR:ode0</td><td>0.17906</td><td>0.02888</td><td>0.08653</td><td>0.194</td><td>1.38</td><td>0.038</td><td>15.9</td><td>0.216</td><td>479</td></tr>
+          <tr class="hl"><td>扩散 BR:ode0 + 落脚规划（主线）</td><td class="up">0.17971</td><td class="down">0.02907</td><td class="up">0.08681</td><td class="up">0.030</td><td class="up">1.72</td><td class="up">0.015</td><td>21.8</td><td class="down">0.250</td><td class="down">479</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="notes">
+      <li>test 上主线相对 FD2：mpjpe 只好 0.45%（逐 seed −0.95 / −0.14 / −0.26%），xyz_mse 差 4.8%。val 上的精度收益（−2.0%）在 test 上大部分没有保住，与以往记录的 val 高估约 1.4 个百分点一致。</li>
+      <li>确定的改进是腿：滑行帧比 0.203 → 0.030，步数 1.46 → 1.72，穿地 0.041 → 0.015，与 val 一致。</li>
+      <li>四肢摆动和交互（漏接触 +19%）比 FD2 差，是下一步要解决的问题。</li>
+    </ul>
+    <ul class="notes">
+      <li>滑行帧比从 0.191 降到 0.032，和真实动作的 0.034 持平；穿地减半；mpjpe 只多 0.3%。</li>
+      <li>按预登记判定还差一条：左右脚交替相关要求 ≤ −0.25，实际 −0.245（三个 seed 为 −0.258、−0.239、−0.239）。是否接受由你决定，规划层参数不再调。</li>
+      <li>第一版把摆动固定为 21 帧（来自带抖动的接触判定），视频里后腿被拉成一字马，按规则判为不通过；现在的版本改为随步长自适应。</li>
+      <li>规划层只管脚，不改模型预测的骨盆走向：194 号案例里 B 走错方向、216 号案例站姿过宽，仍然存在。</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-videos">
+    <h2 id="s-videos">并排视频</h2>
+    <p>每段四栏同一机位：GT、FD2、扩散 BR:ode0、扩散 BR:ode0 + 落脚规划，半速播放（2.5 s 的预测放 5 s）。前 10 帧是观测，各栏都画成深灰；之后是预测，模型栏里淡灰的骨架是 GT，方便看偏差。地面上的点是从观测末帧起的脚踝足迹：分开的点或小簇说明在迈步，连成一条线说明在滑。</p>
+    <div class="legend" aria-label="图例">
+      <span><i class="sw" style="background: #2F6BFF"></i>A（施动者）</span>
+      <span><i class="sw" style="background: #E5484D"></i>B（受动者）</span>
+      <span><i class="sw" style="background: #5B6472"></i>观测段</span>
+      <span><i class="sw" style="background: #9AA0A6"></i>GT 参照</span>
+    </div>
+    <p>案例不是挑出来的：前 8 个是上一轮就固定下来的审查集（6 个随机 + 2 个推人），最后 1 个是扩散模型误差增加最多的窗口。在这 8 个固定案例上扩散模型 2 个更好、1 个持平、5 个更差，而在全部 247 个窗口上它有 153 个更好，所以这组案例偏向它的弱项。数据来自受试者留出 val、seed0。</p>
+    <div class="controls">
+      <button type="button" id="play-all">全部播放</button>
+      <button type="button" id="pause-all">全部暂停</button>
+      <button type="button" id="restart-all">全部从头</button>
+    </div>
+    <div class="videos" id="videos"></div>
+  </section>
+
+  <footer>
+    <div>文件位置：<code>NTU2PForecast/results/forecasting/ntu120_label/ntu2p_bandflow/compare_page/</code>（本页与视频）；结果文档 <code>docs/ai/context/20261104-095145-ntu2p-bandflow-br-ode0-3seed-result.md</code>。</div>
+    <div>落脚规划层：<code>utils/ntu2p_foot_planner.py</code>，结果文档 <code>docs/ai/context/20261104-172148-ntu2p-foot-planner-result.md</code>。</div>
+    <div>视频由 <code>scripts/render_ntu2p_compare_video.py</code> 生成；权重 <code>ntu2p_bandflow_subjval_BR_s0_10000/ema</code> 与 <code>ntu2p_v2subj_…FD2_s0_10000/ema</code>。</div>
+  </footer>
+</main>
+
+<script>
+  // 案例清单：与 videos/manifest.json 一致；mpjpe 为该窗口的逐窗值（m）。
+  const CASES = [
+    { file: "case_194_S026C001P074R001A022", action: "跟随（follow）", group: "随机", fd2: 0.314, br: 0.333, plan: 0.332, note: "规划后 A 交替迈步；BR 预测的 B 仍走错方向，结尾与 A 重叠" },
+    { file: "case_216_S029C001P049R002A020", action: "一起搬东西", group: "随机", fd2: 0.152, br: 0.179, plan: 0.181, note: "规划后脚不再拖线；B 的过宽站姿来自原预测" },
+    { file: "case_098_S012C001P027R001A006", action: "拥抱", group: "随机", fd2: 0.288, br: 0.310, plan: 0.31, note: "规划后 A 走近时有正常抬腿；GT 骨架本身有跳点" },
+    { file: "case_010_S001C001P004R001A011", action: "走开（walking apart）", group: "随机", fd2: 0.131, br: 0.175, plan: 0.175, note: "规划后两人左右腿交替走开，原来是整段滑行" },
+    { file: "case_107_S012C001P027R002A007", action: "递东西", group: "随机", fd2: 0.093, br: 0.095, plan: 0.095, note: "原地递物，规划后脚保持静止" },
+    { file: "case_227_S029C001P089R001A026", action: "石头剪刀布", group: "随机", fd2: 0.178, br: 0.138, plan: 0.137, note: "原地猜拳，规划后脚保持静止" },
+    { file: "case_028_S005C001P004R002A003", action: "推人", group: "推人", fd2: 0.187, br: 0.201, plan: 0.199, note: "规划后 B 一步一步后退；但 A 的手没到 B 就开始退（各栏都是）" },
+    { file: "case_002_S001C001P004R001A003", action: "推人", group: "推人", fd2: 0.149, br: 0.140, plan: 0.14, note: "" },
+    { file: "case_225_S029C001P089R001A020", action: "一起搬东西", group: "BR 误差增加最多", fd2: 0.278, br: 0.380, plan: 0.378, note: "BR 选错整体走向（A 大幅移动、GT 原地小步）；规划后至少不再滑" }
+  ];
+
+  const host = document.getElementById("videos");
+  const videos = [];
+  for (const c of CASES) {
+    const delta = 100 * (c.br / c.fd2 - 1);
+    const better = Math.abs(delta) < 3 ? "持平" : (delta < 0 ? "BR 更好" : "BR 更差");
+    const cls = Math.abs(delta) < 3 ? "" : (delta < 0 ? "up" : "down");
+    const clip = document.createElement("div");
+    clip.className = "clip";
+    clip.innerHTML =
+      '<video muted loop playsinline preload="metadata" controls poster="videos_planner/' + c.file + '.jpg" aria-label="' + c.action + ' 案例的 GT、FD2、扩散模型与加落脚规划后的对比">' +
+      '<source src="videos_planner/' + c.file + '.mp4" type="video/mp4"></video>' +
+      '<div class="meta"><b>' + c.action + '</b><span>' + c.group + ' · ' + c.file.replace("case_", "#").replace("_", " ") + '</span>' +
+      '<span class="mono">mpjpe FD2 ' + c.fd2.toFixed(3) + ' / BR ' + c.br.toFixed(3) + ' / BR+规划 ' + c.plan.toFixed(3) + '</span>' +
+      '<span class="verdict ' + cls + '">' + better + (better === "持平" ? "" : "（" + (delta > 0 ? "+" : "") + delta.toFixed(0) + "%）") + '</span>' +
+      (c.note ? '<span>' + c.note + '</span>' : '') + '</div>';
+    host.appendChild(clip);
+    videos.push(clip.querySelector("video"));
+  }
+
+  // 只自动播放滚到眼前的视频，离开视口就暂停；偏好减少动态时不自动播放。
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduce && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (e.isIntersecting) { e.target.play().catch(() => {}); } else { e.target.pause(); }
+      }
+    }, { threshold: 0.6 });
+    videos.forEach(v => io.observe(v));
+  }
+  document.getElementById("play-all").addEventListener("click", () => videos.forEach(v => v.play().catch(() => {})));
+  document.getElementById("pause-all").addEventListener("click", () => videos.forEach(v => v.pause()));
+  document.getElementById("restart-all").addEventListener("click", () => videos.forEach(v => { v.currentTime = 0; v.play().catch(() => {}); }));
+</script>

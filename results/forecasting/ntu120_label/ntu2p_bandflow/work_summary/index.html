@@ -1,0 +1,571 @@
+<title>NTU2P 本轮研究记录</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* 版式：单栏工作记录；先结论，再"改动落在哪一级"总图，再按时间的 7 步，最后机制图、验证图、得失表和视频。
+     沿用对比页的配色：A 蓝 / B 红是视频里的人物色；青绿 = 采纳的新部件，灰虚线 = 试过不采纳。 */
+  :root {
+    --bg: #F5F7FA;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --accent: #0E7C74;
+    --accent-tint: #E2F3F1;
+    --old: #8A94A3;
+    --old-tint: #EEF0F3;
+    --good: #1F7A3A;
+    --bad: #B4381F;
+    --person-a: #2F6BFF;
+    --person-b: #E5484D;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+      --good: #5CC27A; --bad: #F08A6E; --person-a: #6C97FF; --person-b: #FF7A7E; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+    --good: #5CC27A; --bad: #F08A6E; --person-a: #6C97FF; --person-b: #FF7A7E; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.7; }
+  .wrap {
+    max-width: 1080px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 56px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); font-weight: 700; }
+  h2 { font-size: var(--step-2); font-weight: 700; }
+  h3 { font-size: var(--step-1); font-weight: 500; }
+  p { margin: 0; max-width: 68ch; }
+  section { display: grid; gap: 20px; min-width: 0; }
+  a { color: var(--accent); }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .mono, code { font-family: var(--font-mono); font-size: 0.86em; }
+  .lede { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  .up { color: var(--good); } .down { color: var(--bad); }
+
+  /* 状态标签：采纳 / 不采纳 / 只报告 / 完成 */
+  .chip { display: inline-block; font-size: 0.75rem; line-height: 1.6; border-radius: 999px; padding: 1px 10px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; width: fit-content; }
+  .chip.adopt { color: var(--accent); background: var(--accent-tint); border-color: var(--accent); }
+  .chip.reject { color: var(--old); background: var(--old-tint); border-style: dashed; border-color: var(--old); }
+  .chip.wait { color: var(--bad); border-color: var(--bad); }
+
+  /* 先说结论 */
+  .verdicts { display: grid; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+  .verdicts > div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .verdicts > div:last-child { border-bottom: 0; }
+  .verdicts p { max-width: none; }
+  @media (max-width: 560px) { .verdicts > div { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
+
+  /* 图 */
+  figure { margin: 0; display: grid; gap: 12px; min-width: 0; }
+  figcaption { font-size: var(--step--1); color: var(--muted); max-width: 80ch; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px; }
+  svg { display: block; width: 100%; height: auto; color: var(--fg); font-family: var(--font-body); }
+  svg.wide { min-width: 860px; }
+  svg.mid { min-width: 440px; }
+  svg .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+  svg .bx-old { fill: var(--old-tint); stroke: var(--old); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  svg .bx-new { fill: var(--accent-tint); stroke: var(--accent); stroke-width: 1.6; }
+  svg .t1 { font-size: 13px; font-weight: 500; fill: currentColor; }
+  svg .t2 { font-size: 11px; fill: var(--muted); }
+  svg .note { font-size: 11px; fill: var(--muted); }
+  svg .note-new { font-size: 12px; fill: var(--accent); font-weight: 500; }
+  svg .note-old { font-size: 11px; fill: var(--old); }
+  svg .ar { stroke: var(--muted); stroke-width: 1.3; fill: none; }
+  svg .ar-new { stroke: var(--accent); stroke-width: 1.6; fill: none; }
+  svg .ar-old { stroke: var(--old); stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; }
+  svg .head { fill: var(--muted); } svg .head-new { fill: var(--accent); } svg .head-old { fill: var(--old); }
+  svg .mk { fill: var(--accent); } svg .mk-old { fill: var(--old); }
+  svg .mk-t { font-size: 11px; font-weight: 700; fill: var(--panel); }
+  svg .grid { stroke: var(--line); stroke-width: 1; }
+  svg .axis { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  svg .row { font-size: 12px; fill: currentColor; }
+  svg .row-m { font-size: 12px; fill: currentColor; font-weight: 700; }
+  svg .val { font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  svg .v-good { fill: var(--good); } svg .v-bad { fill: var(--bad); }
+  svg .l-good { stroke: var(--good); stroke-width: 3; } svg .l-bad { stroke: var(--bad); stroke-width: 3; } svg .l-flat { stroke: var(--muted); stroke-width: 3; }
+  svg .dot-br { fill: var(--panel); stroke: currentColor; stroke-width: 1.8; }
+  svg .dot-g1 { fill: var(--accent); }
+  svg .gate { stroke: var(--bad); stroke-width: 1.2; stroke-dasharray: 3 3; }
+  svg .bone-a { stroke: var(--person-a); stroke-width: 2; } svg .bone-b { stroke: var(--person-b); stroke-width: 2; }
+  svg .node-a { fill: var(--person-a); } svg .node-b { fill: var(--person-b); }
+  svg .edge { stroke: var(--accent); fill: none; stroke-linecap: round; }
+  svg .ground { stroke: var(--muted); stroke-width: 1.2; }
+  svg .slide { stroke: var(--old); stroke-width: 1.4; stroke-dasharray: 2 4; fill: none; }
+  svg .foot { fill: var(--accent); }
+  svg .arc { stroke: var(--accent); stroke-width: 2; fill: none; }
+  svg .arc2 { stroke: var(--accent); stroke-width: 2; fill: none; opacity: 0.45; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--step--1); color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 16px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid; }
+  .sw.new { background: var(--accent-tint); border-color: var(--accent); }
+  .sw.old { background: var(--old-tint); border-color: var(--old); border-style: dashed; }
+  .sw.line { height: 3px; border: 0; border-radius: 2px; }
+
+  /* 时间线 */
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-left: 2px solid var(--line); }
+  .step { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 20px; padding: 0 0 32px 22px; position: relative; }
+  .step::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 2px solid var(--muted); }
+  .step.is-adopt::before { border-color: var(--accent); background: var(--accent); }
+  .step.is-reject::before { border-color: var(--old); }
+  .step:last-child { padding-bottom: 0; }
+  .step .side { display: grid; gap: 6px; align-content: start; }
+  .step .n { font-family: var(--font-mono); font-size: var(--step-2); font-weight: 500; line-height: 1; color: var(--muted); }
+  .step .date { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .step .body { display: grid; gap: 10px; min-width: 0; }
+  .step h3 { font-weight: 700; }
+  .quote { font-size: var(--step--1); color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; max-width: 72ch; }
+  .kv { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 4px 12px; }
+  .kv dt { font-size: var(--step--1); color: var(--muted); padding-top: 2px; }
+  .kv dd { margin: 0; max-width: 72ch; }
+  @media (max-width: 640px) {
+    .step { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .step .side { grid-auto-flow: column; justify-content: start; align-items: center; gap: 12px; }
+    .kv { grid-template-columns: minmax(0, 1fr); }
+    .kv dt { padding-top: 6px; }
+  }
+
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  @media (max-width: 900px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+
+  /* 表 */
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.desc { white-space: normal; text-align: left; min-width: 14rem; color: var(--muted); }
+  tr.sep td { background: var(--bg); color: var(--muted); font-weight: 500; text-align: left; }
+
+  /* 视频 */
+  .videos { display: grid; gap: 32px; }
+  .clip { display: grid; gap: 8px; min-width: 0; }
+  .clip video { width: 100%; height: auto; aspect-ratio: 4 / 1; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #FFFFFF; display: block; }
+  .clip .meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: var(--step--1); color: var(--muted); }
+  .clip .meta b { color: var(--fg); font-weight: 500; font-size: var(--step-0); }
+  .clip p { font-size: var(--step--1); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+  button { font: inherit; font-size: var(--step--1); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  button:focus-visible, video:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  ul.notes { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 80ch; }
+  footer { font-size: var(--step--1); color: var(--muted); display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 20px; }
+  footer code { word-break: break-all; }
+</style>
+
+<main class="wrap">
+  <header style="display:grid; gap:14px">
+    <div class="eyebrow">NTU120 双人动作预测 · 观测 10 帧 → 预测 50 帧（2.5 s） · 2026-11-02 至 11-04</div>
+    <h1>NTU2P 本轮研究记录</h1>
+    <p class="lede">这一轮你提了三件事：把扩散模型放进原来的架构、最终预测由扩散生成；让腿真正迈步、不漂移；用关节之间的图网络让"手碰到之后才躲"。这一页按时间说明我做了哪几件事、每件的结果和决定。架构逐级对照和 9 段完整视频在<a href="https://claude.ai/artifact/Csh1PeSj5inzf5BiHGSghK">扩散预测对比页</a>。</p>
+  </header>
+
+  <section aria-labelledby="s-verdict">
+    <h2 id="s-verdict">先说结论</h2>
+    <div class="verdicts">
+      <div><span class="chip adopt">现在的主线</span><p><b>扩散 BR:ode0 + 落脚规划层</b>，取代上一代 FD2。最终预测由 20 步扩散采样生成，再由规划层把漂移的脚改成锁定加迈步。你在 11-04 确认"接受，并入主线"。</p></div>
+      <div><span class="chip adopt">确定变好</span><p><b>腿。</b>原协议 test 上滑行帧比 0.203 → 0.030（−85%），步数 1.46 → 1.72，穿地 −64%。视频里两人走路时左右脚交替迈步，不再贴地滑。</p></div>
+      <div><span class="chip wait">没有变好</span><p>精度在 test 上只比 FD2 好 0.45%（受试者留出验证集上是 2%），xyz_mse 差 4.8%。四肢摆动幅度少了约 6 成。"手没碰到就躲"和"走错方向撞到对方"都还在。</p></div>
+      <div><span class="chip reject">试过不采纳</span><p>关节级交互图 G1 / G2：没有改变反应时机。G1 在 seed0 上的精度提升，补 2 个 seed 后没有复现，判为 seed 噪声。</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-where">
+    <h2 id="s-where">改动落在流水线的哪一级</h2>
+    <figure>
+      <div class="scroll">
+        <svg class="wide" viewBox="0 0 1060 270" role="img" aria-label="预测流水线：观测与标签经规范化进入扩散去噪器，循环 20 步后解码、组装投影，最后经落脚规划层输出。采纳的改动是扩散去噪器（步骤 2、3）、11 阶 DCT 解码（步骤 2）和落脚规划层（步骤 4）；关节级交互图（步骤 6、7）接在去噪器上，试过不采纳。">
+          <defs>
+            <marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head"/></marker>
+            <marker id="ahn" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head-new"/></marker>
+            <marker id="aho" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head-old"/></marker>
+          </defs>
+
+          <!-- 试过不采纳：关节级交互图 -->
+          <rect class="bx-old" x="298" y="18" width="180" height="56" rx="6"/>
+          <text class="t1" x="388" y="42" text-anchor="middle">关节级交互图 G1 / G2</text>
+          <text class="t2" x="388" y="60" text-anchor="middle">13 关节组 + 跨人距离边</text>
+          <line class="ar-old" x1="388" y1="74" x2="388" y2="129" marker-end="url(#aho)"/>
+          <text class="note-old" x="396" y="106">注意力偏置 · 不采纳</text>
+          <circle class="mk-old" cx="298" cy="18" r="10"/><text class="mk-t" x="298" y="22" text-anchor="middle">6</text>
+          <circle class="mk-old" cx="320" cy="18" r="10"/><text class="mk-t" x="320" y="22" text-anchor="middle">7</text>
+
+          <!-- 主流水线 -->
+          <rect class="bx" x="10" y="130" width="110" height="60" rx="6"/>
+          <text class="t1" x="65" y="156" text-anchor="middle">观测 10 帧</text><text class="t2" x="65" y="174" text-anchor="middle">+ 26 类动作标签</text>
+          <rect class="bx" x="140" y="130" width="96" height="60" rx="6"/>
+          <text class="t1" x="188" y="156" text-anchor="middle">① 规范化</text><text class="t2" x="188" y="174" text-anchor="middle">朝向对方系</text>
+          <rect class="bx-new" x="256" y="130" width="264" height="60" rx="6"/>
+          <text class="t1" x="388" y="156" text-anchor="middle">②③④ 扩散去噪器（替换 FD2 的 Mixer 与输出头）</text>
+          <text class="t2" x="388" y="174" text-anchor="middle">STG Transformer ×6 · 每步预测干净的 DCT 系数</text>
+          <rect class="bx-new" x="540" y="130" width="110" height="60" rx="6"/>
+          <text class="t1" x="595" y="156" text-anchor="middle">⑤ IDCT×ramp</text><text class="t2" x="595" y="174" text-anchor="middle">局部只留 11 阶</text>
+          <rect class="bx" x="670" y="130" width="130" height="60" rx="6"/>
+          <text class="t1" x="735" y="156" text-anchor="middle">⑥⑦⑧ 组装 + 投影</text><text class="t2" x="735" y="174" text-anchor="middle">骨长恒定、刚体手</text>
+          <rect class="bx-new" x="820" y="130" width="110" height="60" rx="6"/>
+          <text class="t1" x="875" y="156" text-anchor="middle">⑨ 落脚规划</text><text class="t2" x="875" y="174" text-anchor="middle">锁脚 + 迈步</text>
+          <rect class="bx" x="950" y="130" width="100" height="60" rx="6"/>
+          <text class="t1" x="1000" y="156" text-anchor="middle">未来 50 帧</text><text class="t2" x="1000" y="174" text-anchor="middle">2 人 × 55 关节</text>
+
+          <line class="ar" x1="120" y1="160" x2="139" y2="160" marker-end="url(#ah)"/>
+          <line class="ar" x1="236" y1="160" x2="255" y2="160" marker-end="url(#ah)"/>
+          <line class="ar-new" x1="520" y1="160" x2="539" y2="160" marker-end="url(#ahn)"/>
+          <line class="ar" x1="650" y1="160" x2="669" y2="160" marker-end="url(#ah)"/>
+          <line class="ar-new" x1="800" y1="160" x2="819" y2="160" marker-end="url(#ahn)"/>
+          <line class="ar" x1="930" y1="160" x2="949" y2="160" marker-end="url(#ah)"/>
+
+          <!-- 采样循环 -->
+          <path class="ar-new" d="M470,190 V222 H306 V192" marker-end="url(#ahn)"/>
+          <text class="note-new" x="388" y="242" text-anchor="middle">循环 20 步（Heun），起点 z = 0，确定性读出 ode0</text>
+          <text class="note" x="875" y="212" text-anchor="middle">不训练，只改膝、踝、脚</text>
+          <text class="note" x="595" y="212" text-anchor="middle">≤ 2 Hz，去掉拟合抖动</text>
+
+          <!-- 步骤编号 -->
+          <circle class="mk" cx="256" cy="130" r="10"/><text class="mk-t" x="256" y="134" text-anchor="middle">2</text>
+          <circle class="mk" cx="278" cy="130" r="10"/><text class="mk-t" x="278" y="134" text-anchor="middle">3</text>
+          <circle class="mk" cx="540" cy="130" r="10"/><text class="mk-t" x="540" y="134" text-anchor="middle">2</text>
+          <circle class="mk" cx="820" cy="130" r="10"/><text class="mk-t" x="820" y="134" text-anchor="middle">4</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="sw new"></i>本轮换上并采纳</span>
+        <span><i class="sw old"></i>试过，不采纳</span>
+        <span>圆圈数字 = 下面时间线的步骤</span>
+      </div>
+      <figcaption>①⑥⑦⑧ 和 FD2 相同。采纳的三处改动：扩散去噪器替换 FD2 的 ②③④；解码只保留 11 阶局部 DCT；输出端加落脚规划层。关节级交互图接在去噪器的注意力上，试过两版都没有通过。步骤 1（迁出新项目）和步骤 5（test 评价）不改流水线，图里没有标。</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="s-steps">
+    <h2 id="s-steps">按时间做了什么</h2>
+    <ol class="steps">
+      <li class="step">
+        <div class="side"><span class="n">1</span><span class="date">11-03</span><span class="chip">完成</span></div>
+        <div class="body">
+          <h3>把训练代码迁到新项目</h3>
+          <p class="quote">"你先把当前项目的相关的代码文件单独提取出来，在 /home/rpartx3080/CodeSpace 这个目录下新建一个项目，专门放我这里的训练代码"</p>
+          <dl class="kv">
+            <dt>做了</dt><dd>按实际 import 追踪，从 ReGenNet 提取 53 个文件到 <code>NTU2PForecast</code>，路径不变；数据集、人体模型和 xyz 缓存用只读软链接。</dd>
+            <dt>结果</dt><dd>FD2 评价 439 项、JiT 流评价 778 项与 ReGenNet 存档逐项一致，FD2 训练 300 步逐位相同。另外发现：扩散去噪器的训练在 GPU 上不逐位确定，同一配置连跑两次从第 3 步开始分歧，所以单个 seed 的结果要谨慎。</dd>
+          </dl>
+        </div>
+      </li>
+      <li class="step">
+        <div class="side"><span class="n">2</span><span class="date">11-03</span><span class="chip wait">交你决定</span></div>
+        <div class="body">
+          <h3>用扩散网络替换 ③④，最终预测由采样生成</h3>
+          <p class="quote">"开始做 1 换掉整个 ③④，让扩散网络自己出完整预测"</p>
+          <dl class="kv">
+            <dt>做了</dt><dd>先查上一轮多步采样为什么抖：GT 在 2 Hz 以上的能量主要是骨架拟合抖动，扩散把它学成了样本里的抖动。于是 <b>B</b>：局部 DCT 从 20 阶减到 11 阶；<b>BR</b>：再让高噪声段（t 在 0.5 到 1 之间）的去噪估计也用 FD2 的损失配方，因为最后一步的估计就是交付的预测。规定只有多步采样读出能算最终预测。</dd>
+            <dt>结果</dt><dd>seed0：单样本 jerk 55 → 29；BR:ode0 mpjpe <span class="up">−1.81%</span>、jerk 15.4（FD2 20.4），但 xyz_mse <span class="down">+4.4%</span>，超过预登记容许的 +0.5%。mse 增量的 86% 来自最差的 10 个窗口：采样选定了一种整体走向，偶尔选错。</dd>
+          </dl>
+        </div>
+      </li>
+      <li class="step is-adopt">
+        <div class="side"><span class="n">3</span><span class="date">11-04</span><span class="chip adopt">采纳</span></div>
+        <div class="body">
+          <h3>补 3 seed，在验证集上采纳 BR:ode0</h3>
+          <p class="quote">"接受，补 3 seed"</p>
+          <dl class="kv">
+            <dt>做了</dt><dd>只对 BR:ode0 把 xyz_mse 门限放宽到 1.05 倍（写成修订文档），补 seed1、seed2。</dd>
+            <dt>结果</dt><dd>受试者留出验证集 3 seed：mpjpe 0.17220 → 0.16835（<span class="up">−2.24%</span>，逐 seed −1.81 / −2.42 / −2.47%），mae −2.7%，xyz_mse <span class="down">+2.8%</span>，jerk 20.4 → 15.8。抽帧看到步行是弓步加滑行，194 号窗两人重叠。</dd>
+          </dl>
+        </div>
+      </li>
+      <li class="step is-adopt">
+        <div class="side"><span class="n">4</span><span class="date">11-04</span><span class="chip adopt">采纳</span></div>
+        <div class="body">
+          <h3>让腿真正迈步：落脚规划层</h3>
+          <p class="quote">"我需要腿真正的迈步……现在我这儿有些分数虽然说高了，但是最后的视频效果很差，腿都在漂移。""视频效果你也要自己抽帧自己去看。"</p>
+          <dl class="kv">
+            <dt>做了</dt><dd>先查 DCT 表示是不是瓶颈：GT 经 11 阶编解码后仍然正常迈步，所以不是。问题在模型把迈步的相位平均掉了，脚跟着骨盆平移。于是在输出端加一层不训练的落脚规划，参数全部取自训练集 GT 的步态统计。第一版摆动固定 21 帧，抽帧看到一字马式弓步，判为失败；第二版摆动按步长自适应 5 到 12 帧。</dd>
+            <dt>结果</dt><dd>验证集 3 seed：滑行帧比 0.191 → 0.032（GT 0.034），步数 1.37 → 1.69，穿地 0.067 → 0.028，mpjpe +0.3%；9 段固定案例抽帧通过。左右交替相关 −0.245，比预登记的 −0.25 差一点，你确认"接受，并入主线"。</dd>
+          </dl>
+        </div>
+      </li>
+      <li class="step">
+        <div class="side"><span class="n">5</span><span class="date">11-04</span><span class="chip">只报告</span></div>
+        <div class="body">
+          <h3>原协议复训，test 只评一次</h3>
+          <p class="quote">"要"（原协议复训并评一次 test）；"你用 html 画一下当前模型的架构流程图……渲染成视频，然后一起放在 html 中作为对比"</p>
+          <dl class="kv">
+            <dt>做了</dt><dd>在原协议训练集（1758 条）上复训 3 seed，test（1253 条）上每种读出每个 seed 只评一次；FD2 用同一命令重算 test。同时做了对比页：架构逐级对照和 9 段四栏视频。</dd>
+            <dt>结果</dt><dd>主线 mpjpe 0.17971 vs FD2 0.18052（<span class="up">−0.45%</span>），xyz_mse <span class="down">+4.8%</span>，滑行帧比 <span class="up">−85%</span>。验证集上的 −2% 在 test 上大部分消失，这个差距和以前测到的验证集偏差（约 1.4 个百分点）同量级。</dd>
+          </dl>
+        </div>
+      </li>
+      <li class="step is-reject">
+        <div class="side"><span class="n">6</span><span class="date">11-04</span><span class="chip reject">不采纳</span></div>
+        <div class="body">
+          <h3>关节级交互图 G1 / G2</h3>
+          <p class="quote">"我的手和他的肩膀相关性肯定会更强一些，这样他的手碰到别人的肩膀之后，那个别人就会往后躲"</p>
+          <dl class="kv">
+            <dt>做了</dt><dd>每个人从 5 个粗部位细分为 13 个关节组，每对跨人关节组之间有可学习的边，再按当前估计的距离加边权；B 只能看到 A 当前和以前的时刻。G1 只改图结构；G2 再加"手到对方躯干的距离曲线"和"两人最近距离曲线"两项损失。</dd>
+            <dt>结果</dt><dd>seed0：接触前超额后退 0.0330 → 0.0325（G1）/ 0.0339（G2），预登记要求降 20%；漏接触 43 → 47 / 49；G2 的推人接触距离误差 −8%。12 个推人窗口的"接触—后退"曲线三者几乎重合，194 号窗两人重叠仍在。</dd>
+          </dl>
+        </div>
+      </li>
+      <li class="step is-reject">
+        <div class="side"><span class="n">7</span><span class="date">11-04</span><span class="chip reject">不通过</span></div>
+        <div class="body">
+          <h3>验证 G1 的精度提升</h3>
+          <p class="quote">"验证 G1 的精度提升"</p>
+          <dl class="kv">
+            <dt>做了</dt><dd>G1 在 seed0 上 mpjpe −2.2%、xyz_mse −4.4%，这是没有事先预登记的意外发现。先写好判定规则，再补训：只用新的 seed1、seed2 判定，要求 mpjpe 至少降 0.8%、mse 和 mae 不变差、两个 seed 各自都赢主线。</dd>
+            <dt>结果</dt><dd>seed1 −0.02%，seed2 <span class="down">+1.23%</span>；判定用的均值 mpjpe <span class="down">+0.60%</span>、xyz_mse <span class="down">+2.9%</span>。seed0 是 3 次里最好的一次，G1 不同 seed 之间的波动是主线的 2.3 到 2.6 倍。</dd>
+          </dl>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s-mech">
+    <h2 id="s-mech">两个新机制</h2>
+    <div class="pair">
+      <figure>
+        <div class="scroll">
+          <svg class="mid" viewBox="0 0 520 250" role="img" aria-label="落脚规划层：模型输出的踝贴地滑行；规划层让脚着地时钉住，身体带开超过 0.16 米时抬脚，划 5 到 12 帧的弧线，落在预测位置前 0.10 米处再钉住。">
+            <text class="note" x="20" y="22">身体前进方向 →</text>
+            <!-- 模型输出：踝贴地滑行 -->
+            <line class="slide" x1="40" y1="186" x2="500" y2="186"/>
+            <text class="note-old" x="40" y="236">虚线：模型输出的踝，跟着骨盆连续滑行</text>
+            <!-- 规划后的脚 -->
+            <line class="ground" x1="20" y1="192" x2="510" y2="192"/>
+            <rect class="foot" x="44" y="180" width="34" height="9" rx="3"/>
+            <text class="t2" x="61" y="170" text-anchor="middle">着地钉住</text>
+            <path class="arc" d="M78,184 Q170,96 262,184"/>
+            <rect class="foot" x="262" y="180" width="34" height="9" rx="3"/>
+            <text class="t2" x="279" y="170" text-anchor="middle">钉住</text>
+            <path class="arc2" d="M296,184 Q380,104 464,184"/>
+            <rect class="foot" x="464" y="180" width="34" height="9" rx="3" opacity="0.45"/>
+            <text class="note-new" x="150" y="104" text-anchor="middle">摆动 5–12 帧（按步长）</text>
+            <text class="note" x="150" y="120" text-anchor="middle">弧高 0.07 m</text>
+            <!-- 触发距离 -->
+            <line class="ar" x1="61" y1="208" x2="150" y2="208" marker-end="url(#ah2)"/>
+            <line class="grid" x1="61" y1="200" x2="61" y2="214"/>
+            <circle cx="150" cy="186" r="3.5" style="fill: var(--old)"/>
+            <text class="t2" x="160" y="212">踝被带开 &gt; 0.16 m，且另一只脚着地 → 抬脚</text>
+            <!-- 落点 -->
+            <circle cx="232" cy="186" r="3.5" style="fill: var(--old)"/>
+            <text class="t2" x="232" y="64" text-anchor="middle">落点 = 当时预测位置</text>
+            <text class="t2" x="232" y="80" text-anchor="middle">再往前 0.10 m</text>
+            <line class="grid" x1="232" y1="86" x2="232" y2="178"/>
+            <defs><marker id="ah2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head"/></marker></defs>
+          </svg>
+        </div>
+        <figcaption>只改双腿的膝、踝、脚掌，上半身逐位不变。同一时刻只有一只脚在空中；膝用两骨 IK 重解，骨长不变；预测的踝抬高超过 0.20 m（跳、踢）时不干预。所有阈值取自训练集 GT 的步态统计。</figcaption>
+      </figure>
+      <figure>
+        <div class="scroll">
+          <svg class="mid" viewBox="0 0 520 250" role="img" aria-label="关节级交互图：每人 13 个关节组，A 的右手与 B 的肩、胸、头、骨盆之间有跨人边，距离越近边权越大。">
+            <!-- 跨人边（A 右手 → B 各关节组），粗细示意距离近则权重大 -->
+            <path class="edge" d="M205,84 L378,70" stroke-width="5"/>
+            <path class="edge" d="M205,84 L400,78" stroke-width="3.2"/>
+            <path class="edge" d="M205,84 L400,36" stroke-width="2"/>
+            <path class="edge" d="M205,84 L400,128" stroke-width="1.4"/>
+            <path class="edge" d="M205,84 L368,104" stroke-width="2.4"/>
+            <!-- A 骨架 -->
+            <g class="bone-a">
+              <line x1="120" y1="36" x2="120" y2="78"/><line x1="120" y1="78" x2="120" y2="128"/>
+              <line x1="120" y1="78" x2="98" y2="70"/><line x1="120" y1="78" x2="142" y2="70"/>
+              <line x1="98" y1="70" x2="88" y2="104"/><line x1="88" y1="104" x2="84" y2="138"/>
+              <line x1="142" y1="70" x2="172" y2="80"/><line x1="172" y1="80" x2="205" y2="84"/>
+              <line x1="120" y1="128" x2="108" y2="170"/><line x1="120" y1="128" x2="132" y2="170"/>
+              <line x1="108" y1="170" x2="104" y2="214"/><line x1="132" y1="170" x2="136" y2="214"/>
+            </g>
+            <g class="node-a">
+              <circle cx="120" cy="36" r="6"/><circle cx="120" cy="78" r="5"/><circle cx="120" cy="128" r="5"/>
+              <circle cx="98" cy="70" r="4.5"/><circle cx="142" cy="70" r="4.5"/><circle cx="88" cy="104" r="4.5"/><circle cx="172" cy="80" r="4.5"/>
+              <circle cx="84" cy="138" r="4.5"/><circle cx="205" cy="84" r="6.5"/>
+              <circle cx="108" cy="170" r="4.5"/><circle cx="132" cy="170" r="4.5"/><circle cx="104" cy="214" r="4.5"/><circle cx="136" cy="214" r="4.5"/>
+            </g>
+            <!-- B 骨架 -->
+            <g class="bone-b">
+              <line x1="400" y1="36" x2="400" y2="78"/><line x1="400" y1="78" x2="400" y2="128"/>
+              <line x1="400" y1="78" x2="378" y2="70"/><line x1="400" y1="78" x2="422" y2="70"/>
+              <line x1="378" y1="70" x2="368" y2="104"/><line x1="368" y1="104" x2="364" y2="138"/>
+              <line x1="422" y1="70" x2="432" y2="104"/><line x1="432" y1="104" x2="436" y2="138"/>
+              <line x1="400" y1="128" x2="388" y2="170"/><line x1="400" y1="128" x2="412" y2="170"/>
+              <line x1="388" y1="170" x2="384" y2="214"/><line x1="412" y1="170" x2="416" y2="214"/>
+            </g>
+            <g class="node-b">
+              <circle cx="400" cy="36" r="6"/><circle cx="400" cy="78" r="5"/><circle cx="400" cy="128" r="5"/>
+              <circle cx="378" cy="70" r="4.5"/><circle cx="422" cy="70" r="4.5"/><circle cx="368" cy="104" r="4.5"/><circle cx="432" cy="104" r="4.5"/>
+              <circle cx="364" cy="138" r="4.5"/><circle cx="436" cy="138" r="4.5"/>
+              <circle cx="388" cy="170" r="4.5"/><circle cx="412" cy="170" r="4.5"/><circle cx="384" cy="214" r="4.5"/><circle cx="416" cy="214" r="4.5"/>
+            </g>
+            <text class="t1" x="120" y="242" text-anchor="middle" style="fill: var(--person-a)">A（施动）</text>
+            <text class="t1" x="400" y="242" text-anchor="middle" style="fill: var(--person-b)">B（受动）</text>
+            <text class="note-new" x="290" y="24" text-anchor="middle">A 的手 → B 的肩、胸、头……</text>
+            <text class="note" x="290" y="40" text-anchor="middle">越近，边越粗</text>
+          </svg>
+        </div>
+        <figcaption>图里只画了 A 右手发出的边；实际每对跨人关节组（13 × 13）都有边。边权 = 可学习的关节组对偏置 + 按当前估计距离（0–1.4 m）展开的距离项，初始为 0。注意力单元是 2 人 × 13 关节组 × 12 个 5 帧时间块，共 312 个；B 只看 A 当前和以前的时刻。模型因此"知道"手在哪里，但最终输出仍是不同接触时机的平均，B 照样提前平滑后退。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-g1">
+    <h2 id="s-g1">G1 的提升为什么判为噪声</h2>
+    <figure>
+      <div class="scroll">
+        <svg class="mid" viewBox="0 0 700 236" role="img" aria-label="三个 seed 的 mpjpe 对比：seed0 上 G1 比主线低 2.23%，seed1 持平，seed2 高 1.23%；判定用的 seed1、seed2 均值 G1 高 0.60%，没有达到降 0.8% 的通过线。">
+          <!-- 刻度：x = 150 + (mpjpe − 0.164) × 55000 -->
+          <line class="grid" x1="150" y1="28" x2="150" y2="196"/>
+          <line class="grid" x1="260" y1="28" x2="260" y2="196"/>
+          <line class="grid" x1="370" y1="28" x2="370" y2="196"/>
+          <line class="grid" x1="480" y1="28" x2="480" y2="196"/>
+          <line class="grid" x1="590" y1="28" x2="590" y2="196"/>
+          <text class="axis" x="150" y="214" text-anchor="middle">0.164</text>
+          <text class="axis" x="260" y="214" text-anchor="middle">0.166</text>
+          <text class="axis" x="370" y="214" text-anchor="middle">0.168</text>
+          <text class="axis" x="480" y="214" text-anchor="middle">0.170</text>
+          <text class="axis" x="590" y="214" text-anchor="middle">0.172</text>
+          <text class="axis" x="370" y="232" text-anchor="middle">mpjpe（m，越左越好）</text>
+          <text class="axis" x="645" y="20" text-anchor="middle">G1 相对主线</text>
+
+          <!-- seed0：G1 0.16580，BR 0.16959 -->
+          <text class="row" x="10" y="54">seed0（发现时）</text>
+          <line class="l-good" x1="249" y1="50" x2="457.5" y2="50"/>
+          <circle class="dot-br" cx="457.5" cy="50" r="6"/><circle class="dot-g1" cx="249" cy="50" r="6"/>
+          <text class="val v-good" x="645" y="54" text-anchor="middle">−2.23%</text>
+          <!-- seed1：G1 0.16895，BR 0.16899 -->
+          <text class="row" x="10" y="92">seed1</text>
+          <line class="l-flat" x1="422.3" y1="88" x2="424.5" y2="88"/>
+          <circle class="dot-br" cx="424.5" cy="88" r="6"/><circle class="dot-g1" cx="422.3" cy="88" r="6" opacity="0.85"/>
+          <text class="val" x="645" y="92" text-anchor="middle" style="fill: var(--muted)">−0.02%</text>
+          <!-- seed2：G1 0.16987，BR 0.16781 -->
+          <text class="row" x="10" y="130">seed2</text>
+          <line class="l-bad" x1="359.6" y1="126" x2="472.9" y2="126"/>
+          <circle class="dot-br" cx="359.6" cy="126" r="6"/><circle class="dot-g1" cx="472.9" cy="126" r="6"/>
+          <text class="val v-bad" x="645" y="130" text-anchor="middle">+1.23%</text>
+
+          <line class="grid" x1="10" y1="150" x2="690" y2="150"/>
+          <!-- 判定：seed1/2 均值 G1 0.16941，BR 0.16840；通过线 0.992 × BR = 0.16705 -->
+          <text class="row-m" x="10" y="178">seed1/2 均值（判定）</text>
+          <line class="gate" x1="317.9" y1="160" x2="317.9" y2="192"/>
+          <text class="note" x="312" y="196" text-anchor="end" style="fill: var(--bad)">通过线 −0.8%</text>
+          <line class="l-bad" x1="392" y1="174" x2="447.6" y2="174"/>
+          <circle class="dot-br" cx="392" cy="174" r="6"/><circle class="dot-g1" cx="447.6" cy="174" r="6"/>
+          <text class="val v-bad" x="645" y="178" text-anchor="middle">+0.60%</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="width:14px"><circle cx="7" cy="7" r="5" style="fill: var(--panel); stroke: currentColor; stroke-width: 1.8"/></svg>主线 BR</span>
+        <span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="width:14px"><circle cx="7" cy="7" r="5.5" style="fill: var(--accent)"/></svg>G1 关节级交互图</span>
+      </div>
+      <figcaption>都在受试者留出验证集上，读出为 ode0 + 落脚规划层。seed0 是发现这个提升的那次，算进判定会偏乐观，所以判定只看新补的 seed1、seed2，规则在看结果之前写定。3 个 seed 一起算，G1 也只比主线低 0.35%（0.16821 vs 0.16879），在噪声范围内；xyz_mse 和 mae 的判定同样没过。</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="s-test">
+    <h2 id="s-test">现在的主线比上一代好在哪、差在哪</h2>
+    <p>原协议 test（1253 条），3 seed 均值，各评一次。</p>
+    <div class="table">
+      <table>
+        <thead><tr><th>指标</th><th>FD2（上一代）</th><th>主线</th><th>变化</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr class="sep"><td colspan="5">变好</td></tr>
+          <tr><td>滑行帧比</td><td>0.203</td><td>0.030</td><td class="up">−85%</td><td class="desc">脚着地时不再贴地滑</td></tr>
+          <tr><td>步数（GT 2.19）</td><td>1.46</td><td>1.72</td><td class="up">+18%</td><td class="desc"></td></tr>
+          <tr><td>穿地比例</td><td>0.041</td><td>0.015</td><td class="up">−64%</td><td class="desc"></td></tr>
+          <tr><td>mpjpe（m）</td><td>0.18052</td><td>0.17971</td><td class="up">−0.45%</td><td class="desc">逐 seed −0.95 / −0.14 / −0.26%，提升很小</td></tr>
+          <tr><td>xyz_mae</td><td>0.08749</td><td>0.08681</td><td class="up">−0.78%</td><td class="desc"></td></tr>
+          <tr class="sep"><td colspan="5">变差</td></tr>
+          <tr><td>xyz_mse</td><td>0.02774</td><td>0.02907</td><td class="down">+4.8%</td><td class="desc">采样选定一种整体走向，选错时误差大</td></tr>
+          <tr><td>1.2–2 Hz 摆动能量（相对 GT）</td><td>0.604</td><td>0.250</td><td class="down">−59%</td><td class="desc">四肢摆得少，ode0 接近平均动作</td></tr>
+          <tr><td>接触前超额后退（m）</td><td>0.0357</td><td>0.0389</td><td class="down">+9%</td><td class="desc">手没碰到就躲</td></tr>
+          <tr><td>漏接触（次）</td><td>404</td><td>479</td><td class="down">+19%</td><td class="desc"></td></tr>
+          <tr><td>jerk（m/s³）</td><td>20.7</td><td>21.8</td><td class="down">+5%</td><td class="desc">规划层抬脚带来的；不加规划层是 15.9</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-video">
+    <h2 id="s-video">视频（我抽帧看过的三段）</h2>
+    <div class="legend">
+      <span><i class="sw line" style="background:var(--person-a)"></i>A（施动）</span>
+      <span><i class="sw line" style="background:var(--person-b)"></i>B（受动）</span>
+      <span><i class="sw line" style="background:var(--old)"></i>灰色 = GT 位置（对照）</span>
+      <span>地面上的点 = 脚踝轨迹</span>
+    </div>
+    <div class="controls">
+      <button type="button" id="play-all">全部播放</button>
+      <button type="button" id="speed" aria-pressed="false">0.5 倍速</button>
+    </div>
+    <div class="videos">
+      <div class="clip">
+        <div class="meta"><b>#010 走开</b><span>GT | FD2 | BR:ode0 | BR:ode0 + 落脚规划 · 步骤 4</span></div>
+        <video id="v1" src="videos/case_010_S001C001P004R001A011.mp4" poster="videos/case_010_S001C001P004R001A011.jpg" controls muted loop playsinline preload="metadata"></video>
+        <p>FD2 和 BR:ode0 两人都是脚贴地滑开，地面上的脚印连成一条线；加落脚规划后脚印变成分开的点，左右脚交替迈步走开。这一例扩散的 mpjpe 比 FD2 高（0.175 vs 0.131），规划层不改变它。</p>
+      </div>
+      <div class="clip">
+        <div class="meta"><b>#028 推人</b><span>GT | 主线 BR | G1 | G2（都加落脚规划） · 步骤 6</span></div>
+        <video id="v2" src="videos/graph_case_028_S005C001P004R002A003.mp4" poster="videos/graph_case_028_S005C001P004R002A003.jpg" controls muted loop playsinline preload="metadata"></video>
+        <p>GT 里 A 的手约 1.0 s 到达，B 到约 2.1 s 才猛地后仰后退。三个模型里 B 都从约 1.5 s 开始平滑后仰、慢慢退步，幅度比 GT 小，三栏几乎一样：关节图没有改变反应时机。</p>
+      </div>
+      <div class="clip">
+        <div class="meta"><b>#194 跟随</b><span>GT | 主线 BR | G1 | G2（都加落脚规划） · 步骤 6</span></div>
+        <video id="v3" src="videos/graph_case_194_S026C001P074R001A022.mp4" poster="videos/graph_case_194_S026C001P074R001A022.jpg" controls muted loop playsinline preload="metadata"></video>
+        <p>GT 里 B 向右走开、A 跟上。三个模型都让 B 基本留在原地，A 照样往前走，约 2 s 后两人身体重叠。G2 加的两人距离损失也没有阻止。</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-open">
+    <h2 id="s-open">还没解决的</h2>
+    <ul class="notes">
+      <li><b>四肢摆动少。</b>1.2–2 Hz 摆动只有 GT 的约 25%（FD2 约 60%）。改用单个随机样本（τ = 0.3）能提到 35–41%，但 mpjpe 变差 1.7–2.1%，没有通过判定。</li>
+      <li><b>走错方向、两人重叠</b>（#194）。落脚规划层不改骨盆走向，关节图和距离损失都没有修好。</li>
+      <li><b>手没碰到就躲</b>（#028）。所有确定性读出都把"什么时候接触"平均掉了。还没试的一个方向：从多个扩散样本里，只根据预测本身挑出"B 在 A 的手到达之后才后退"的那条，不需要重新训练；风险是单个样本质量一般。</li>
+      <li><b>代码未提交。</b>NTU2PForecast 只有初始提交，之后的改动都在工作区；ReGenNet 分支 <code>feat/ntu2p-jit-flow-rl</code> 的 JiT-RL 工作也未提交。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>项目 <code>/home/rpartx3080/CodeSpace/NTU2PForecast</code>，每一步的设计、预登记和结果在 <code>docs/ai/context/</code> 下按时间戳存放：</span>
+    <span><code>20261103-224829</code> 扩散第 1 阶段 · <code>20261104-095145</code> BR 3 seed · <code>20261104-172148</code> 落脚规划 · <code>20261104-182659</code> test · <code>20261104-193546</code> 关节级交互图 · <code>20261104-225520</code> G1 验证 · <code>20261104-173814</code> 会话上下文</span>
+    <span>选型只用受试者留出验证集（train 1709 / val 247）；10000 step，取权重 EMA 终点；test 只在采纳后评一次。</span>
+  </footer>
+</main>
+
+<script>
+  const videos = [...document.querySelectorAll(".clip video")];
+  const playAll = document.getElementById("play-all");
+  const speed = document.getElementById("speed");
+  playAll.addEventListener("click", () => {
+    const anyPaused = videos.some(v => v.paused);
+    videos.forEach(v => { v.currentTime = 0; anyPaused ? v.play().catch(() => {}) : v.pause(); });
+    playAll.textContent = anyPaused ? "全部暂停" : "全部播放";
+  });
+  speed.addEventListener("click", () => {
+    const slow = speed.getAttribute("aria-pressed") !== "true";
+    speed.setAttribute("aria-pressed", String(slow));
+    videos.forEach(v => { v.playbackRate = slow ? 0.5 : 1; });
+  });
+  videos.forEach(v => v.addEventListener("play", () => {
+    v.playbackRate = speed.getAttribute("aria-pressed") === "true" ? 0.5 : 1;
+  }));
+</script>

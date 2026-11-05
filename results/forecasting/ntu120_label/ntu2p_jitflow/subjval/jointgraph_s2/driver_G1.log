@@ -1,0 +1,11 @@
+训练 G1 s2
+评价 G1
+完成 G1
+Traceback (most recent call last):
+  File "scripts/run_ntu2p_jointgraph.py", line 142, in <module>
+    main()
+  File "scripts/run_ntu2p_jointgraph.py", line 138, in main
+    summarize(out, opts.candidates)
+  File "scripts/run_ntu2p_jointgraph.py", line 99, in summarize
+    ref = rows["BR:ode0plan"]
+KeyError: 'BR:ode0plan'

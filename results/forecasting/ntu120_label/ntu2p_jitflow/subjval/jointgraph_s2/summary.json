@@ -1,0 +1,90 @@
+{
+  "rows": {
+    "BR:ode0plan": {
+      "mpjpe": 0.16780622424143046,
+      "xyz_mse": 0.019761432271435675,
+      "xyz_mae": 0.08155957820565111,
+      "primary_excess_antic": 0.031113170688757602,
+      "missed_contact_total": 48,
+      "contact_rmse_push": 0.240905551822593,
+      "contact_rmse_all": 0.18818574469080993,
+      "wrong_overlap": 0.0034008097165991904,
+      "slide_frame_ratio": 0.03540393539526037,
+      "step_count": 1.7397260273972603,
+      "jerk_body": 22.414486258766313,
+      "foot_penetration_ratio": 0.027125506072874495,
+      "bone_rel_err_body": 9.737813242624983e-08,
+      "dct_mid_ratio": 0.2826484916137063
+    },
+    "BR:t03plan": {
+      "mpjpe": 0.17104627734977706,
+      "xyz_mse": 0.020342390735441373,
+      "xyz_mae": 0.08310298546243776,
+      "primary_excess_antic": 0.030679214468664312,
+      "missed_contact_total": 46,
+      "contact_rmse_push": 0.21881356942915078,
+      "contact_rmse_all": 0.19107248276156055,
+      "wrong_overlap": 0.004939271255060729,
+      "slide_frame_ratio": 0.03267262110484478,
+      "step_count": 1.6986301369863013,
+      "jerk_body": 24.342485958214304,
+      "foot_penetration_ratio": 0.026477732793522266,
+      "bone_rel_err_body": 9.758210402662139e-08,
+      "dct_mid_ratio": 0.402807820720561
+    },
+    "G1:ode0plan": {
+      "mpjpe": 0.169869024743918,
+      "xyz_mse": 0.02064033207080142,
+      "xyz_mae": 0.08251403269135518,
+      "primary_excess_antic": 0.024613753967930512,
+      "missed_contact_total": 45,
+      "contact_rmse_push": 0.21794512006857789,
+      "contact_rmse_all": 0.19129686262794116,
+      "wrong_overlap": 0.0054251012145748985,
+      "slide_frame_ratio": 0.03566586609543641,
+      "step_count": 1.6369863013698631,
+      "jerk_body": 21.611261109461736,
+      "foot_penetration_ratio": 0.027975708502024292,
+      "bone_rel_err_body": 9.662396524299317e-08,
+      "dct_mid_ratio": 0.32670728915123476
+    },
+    "G1:t03plan": {
+      "mpjpe": 0.1736372971100363,
+      "xyz_mse": 0.021340702407755832,
+      "xyz_mae": 0.08444039022874253,
+      "primary_excess_antic": 0.031386886510916694,
+      "missed_contact_total": 45,
+      "contact_rmse_push": 0.20271983704702295,
+      "contact_rmse_all": 0.19696364554035586,
+      "wrong_overlap": 0.008340080971659919,
+      "slide_frame_ratio": 0.03442505158120115,
+      "step_count": 1.6643835616438356,
+      "jerk_body": 24.49831550643839,
+      "foot_penetration_ratio": 0.028987854251012145,
+      "bone_rel_err_body": 9.693846098294163e-08,
+      "dct_mid_ratio": 0.47248188034300465
+    }
+  },
+  "decisions": {
+    "G1": {
+      "checks": {
+        "接触前超额后退 ≤ 0.8×BR": true,
+        "漏接触 ≤ BR": true,
+        "推人接触距离 RMSE ≤ BR": true,
+        "错误重叠帧比 ≤ BR": false,
+        "护栏 mpjpe ≤ 1.01×BR": false,
+        "护栏 xyz_mse ≤ 1.02×BR": false,
+        "护栏 滑行 ≤ BR+0.01": true,
+        "护栏 步数 ≥ BR−0.1": false,
+        "护栏 jerk ≤ 24.5": true,
+        "护栏 骨长 ≤ 1e-5": true,
+        "护栏 穿地 ≤ BR+0.01": true
+      },
+      "pass": false
+    }
+  },
+  "swing": {
+    "BR": false,
+    "G1": false
+  }
+}

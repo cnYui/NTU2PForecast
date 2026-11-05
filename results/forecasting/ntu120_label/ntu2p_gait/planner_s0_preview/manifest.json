@@ -1,0 +1,50 @@
+[
+  {
+    "index": 194,
+    "group": "walk",
+    "sample_id": "S026C001P074R001A022",
+    "action": "follow",
+    "mpjpe": {
+      "BR_ode0": 0.3326674677977379,
+      "BR_plan": 0.33446226184274885
+    },
+    "video": "case_194_S026C001P074R001A022.mp4",
+    "poster": "case_194_S026C001P074R001A022.jpg"
+  },
+  {
+    "index": 216,
+    "group": "walk",
+    "sample_id": "S029C001P049R002A020",
+    "action": "carry together",
+    "mpjpe": {
+      "BR_ode0": 0.17912757131897603,
+      "BR_plan": 0.18162130849507888
+    },
+    "video": "case_216_S029C001P049R002A020.mp4",
+    "poster": "case_216_S029C001P049R002A020.jpg"
+  },
+  {
+    "index": 225,
+    "group": "walk",
+    "sample_id": "S029C001P089R001A020",
+    "action": "carry together",
+    "mpjpe": {
+      "BR_ode0": 0.37965798091658753,
+      "BR_plan": 0.37593071356690383
+    },
+    "video": "case_225_S029C001P089R001A020.mp4",
+    "poster": "case_225_S029C001P089R001A020.jpg"
+  },
+  {
+    "index": 10,
+    "group": "walk",
+    "sample_id": "S001C001P004R001A011",
+    "action": "walking apart",
+    "mpjpe": {
+      "BR_ode0": 0.1751085845293412,
+      "BR_plan": 0.17794851601640405
+    },
+    "video": "case_010_S001C001P004R001A011.mp4",
+    "poster": "case_010_S001C001P004R001A011.jpg"
+  }
+]

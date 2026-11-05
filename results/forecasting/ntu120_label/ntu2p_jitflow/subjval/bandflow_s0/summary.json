@@ -1,0 +1,455 @@
+{
+  "reference": "FD2ref:endpoint",
+  "rows": {
+    "FD2ref:endpoint": {
+      "xyz_mse": 0.019304528259314023,
+      "xyz_mae": 0.08419753261181989,
+      "mpjpe": 0.17222817616182784,
+      "dct_low_ratio": 0.690707999206247,
+      "dct_mid_ratio": 0.6262378670439079,
+      "dct_high_ratio": 0.009344543176029493,
+      "jerk_body": 20.40475491318208,
+      "foot_penetration_ratio": 0.06396761133603239,
+      "slide_frame_ratio": 0.200354275498129,
+      "step_count": 1.4589041095890412,
+      "gait_sep_corr_f01_10": 0.46789617604532857,
+      "bone_rel_err_body": 1.0632600331254034e-07,
+      "primary_excess_antic": 0.02765609135259203,
+      "missed_contact_total": 53,
+      "contact_distance_rmse_all": 0.18716176550693522,
+      "contact_distance_rmse_push": 0.20269047245564079,
+      "delta_mpjpe_pct": 0.0,
+      "decision": {
+        "l2_not_worse": true,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [],
+        "eligible": false
+      }
+    },
+    "J3:ode0": {
+      "xyz_mse": 0.019735550372163777,
+      "xyz_mae": 0.0820386150044951,
+      "mpjpe": 0.16857342470271386,
+      "dct_low_ratio": 0.6450807410662726,
+      "dct_mid_ratio": 0.2694039835918847,
+      "dct_high_ratio": 0.03987179628462426,
+      "jerk_body": 33.703884066343115,
+      "foot_penetration_ratio": 0.05522267206477733,
+      "slide_frame_ratio": 0.05116389821517378,
+      "step_count": 1.8904109589041096,
+      "gait_sep_corr_f01_10": 0.4132675853074484,
+      "bone_rel_err_body": 1.0579718545340017e-07,
+      "primary_excess_antic": 0.0417652551307677,
+      "missed_contact_total": 48,
+      "contact_distance_rmse_all": 0.18661932797612776,
+      "contact_distance_rmse_push": 0.2150356933166129,
+      "delta_mpjpe_pct": -2.122040388838542,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk",
+          "gait_f01_10"
+        ],
+        "eligible": true
+      }
+    },
+    "J3:median16": {
+      "xyz_mse": 0.019542215934950813,
+      "xyz_mae": 0.08299462448971474,
+      "mpjpe": 0.17026930607040883,
+      "dct_low_ratio": 0.5367292656396669,
+      "dct_mid_ratio": 0.38613518082220977,
+      "dct_high_ratio": 0.08359657374008805,
+      "jerk_body": 59.04561664982986,
+      "foot_penetration_ratio": 0.06696356275303644,
+      "slide_frame_ratio": 0.11768229209961889,
+      "step_count": 1.7123287671232876,
+      "gait_sep_corr_f01_10": 0.5323801687039785,
+      "bone_rel_err_body": 1.0634922106960831e-07,
+      "primary_excess_antic": 0.040420827819570286,
+      "missed_contact_total": 45,
+      "contact_distance_rmse_all": 0.18748264179754415,
+      "contact_distance_rmse_push": 0.20290574256242794,
+      "delta_mpjpe_pct": -1.137369119892695,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk",
+          "dct_high"
+        ],
+        "eligible": true
+      }
+    },
+    "J3:median16t05": {
+      "xyz_mse": 0.019579825213985887,
+      "xyz_mae": 0.0819282627660736,
+      "mpjpe": 0.16828698511065743,
+      "dct_low_ratio": 0.6062246766067415,
+      "dct_mid_ratio": 0.2981826691081386,
+      "dct_high_ratio": 0.048960171549182745,
+      "jerk_body": 42.029278023433974,
+      "foot_penetration_ratio": 0.05623481781376518,
+      "slide_frame_ratio": 0.08347358939822187,
+      "step_count": 1.8356164383561644,
+      "gait_sep_corr_f01_10": 0.48978168206222333,
+      "bone_rel_err_body": 1.0578978303607327e-07,
+      "primary_excess_antic": 0.04076302516344275,
+      "missed_contact_total": 47,
+      "contact_distance_rmse_all": 0.18592249236995043,
+      "contact_distance_rmse_push": 0.21024456527731514,
+      "delta_mpjpe_pct": -2.2883544022827107,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk"
+        ],
+        "eligible": true
+      }
+    },
+    "J3:endpoint": {
+      "xyz_mse": 0.01896179401078205,
+      "xyz_mae": 0.08154290000557417,
+      "mpjpe": 0.167390850270808,
+      "dct_low_ratio": 0.6315200208396029,
+      "dct_mid_ratio": 0.5966565218961899,
+      "dct_high_ratio": 0.029478165873703513,
+      "jerk_body": 25.938997656492322,
+      "foot_penetration_ratio": 0.050404858299595144,
+      "slide_frame_ratio": 0.17948443069735015,
+      "step_count": 1.3424657534246576,
+      "gait_sep_corr_f01_10": 0.43572960356358936,
+      "bone_rel_err_body": 1.0627207928938064e-07,
+      "primary_excess_antic": 0.03416058862931862,
+      "missed_contact_total": 51,
+      "contact_distance_rmse_all": 0.182154944950209,
+      "contact_distance_rmse_push": 0.19936499530641266,
+      "delta_mpjpe_pct": -2.8086727728421357,
+      "decision": {
+        "l2_not_worse": true,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk"
+        ],
+        "eligible": false
+      }
+    },
+    "J3:sample": {
+      "xyz_mse": 0.027770127646760782,
+      "xyz_mae": 0.10238706860088023,
+      "mpjpe": 0.2098551734919973,
+      "dct_low_ratio": 0.9781278628965426,
+      "dct_mid_ratio": 1.1155901640526797,
+      "dct_high_ratio": 0.1959828949845565,
+      "jerk_body": 55.38119613805417,
+      "foot_penetration_ratio": 0.10488866396761133,
+      "slide_frame_ratio": 0.08906377828897406,
+      "step_count": 1.8886986301369864,
+      "gait_sep_corr_f01_10": 0.36345436724258234,
+      "bone_rel_err_body": 1.0722881841009541e-07,
+      "primary_excess_antic": 0.04327046778663701,
+      "missed_contact_total": 36.5,
+      "contact_distance_rmse_all": 0.22214272912733873,
+      "contact_distance_rmse_push": 0.2598747884832779,
+      "energy_score": 0.2043390718473265,
+      "delta_mpjpe_pct": 21.847178649104816,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk",
+          "penetration",
+          "dct_high",
+          "gait_f01_10"
+        ],
+        "eligible": false
+      }
+    },
+    "B:ode0": {
+      "xyz_mse": 0.02128603448148681,
+      "xyz_mae": 0.08412356919001954,
+      "mpjpe": 0.17319208962714625,
+      "dct_low_ratio": 0.6577649535572127,
+      "dct_mid_ratio": 0.10974236052294455,
+      "dct_high_ratio": 0.0070907107574410926,
+      "jerk_body": 17.24748978618442,
+      "foot_penetration_ratio": 0.061052631578947365,
+      "slide_frame_ratio": 0.062251063130276146,
+      "step_count": 1.8630136986301369,
+      "gait_sep_corr_f01_10": 0.43443441581523845,
+      "bone_rel_err_body": 1.0601314568840583e-07,
+      "primary_excess_antic": 0.04638195701380484,
+      "missed_contact_total": 49,
+      "contact_distance_rmse_all": 0.19278344801733827,
+      "contact_distance_rmse_push": 0.22506675930962458,
+      "delta_mpjpe_pct": 0.5596723409604598,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [],
+        "eligible": true
+      }
+    },
+    "B:median16": {
+      "xyz_mse": 0.020477698429634695,
+      "xyz_mae": 0.08383611830984533,
+      "mpjpe": 0.17245466814108706,
+      "dct_low_ratio": 0.5370364984415861,
+      "dct_mid_ratio": 0.17548821696947736,
+      "dct_high_ratio": 0.029621416328776715,
+      "jerk_body": 42.31300020027168,
+      "foot_penetration_ratio": 0.06493927125506073,
+      "slide_frame_ratio": 0.14135350855998172,
+      "step_count": 1.6369863013698631,
+      "gait_sep_corr_f01_10": 0.49948674074390415,
+      "bone_rel_err_body": 1.0629314256936498e-07,
+      "primary_excess_antic": 0.0451551841029099,
+      "missed_contact_total": 48,
+      "contact_distance_rmse_all": 0.19332294686578963,
+      "contact_distance_rmse_push": 0.21139932657716828,
+      "delta_mpjpe_pct": 0.1315069254675283,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk"
+        ],
+        "eligible": true
+      }
+    },
+    "B:median16t05": {
+      "xyz_mse": 0.020815686575374623,
+      "xyz_mae": 0.08345827013857451,
+      "mpjpe": 0.17171594271293053,
+      "dct_low_ratio": 0.6111184946880875,
+      "dct_mid_ratio": 0.12135962113163866,
+      "dct_high_ratio": 0.012073734795327255,
+      "jerk_body": 27.17568880446694,
+      "foot_penetration_ratio": 0.06307692307692307,
+      "slide_frame_ratio": 0.09459824802915845,
+      "step_count": 1.7876712328767124,
+      "gait_sep_corr_f01_10": 0.4741507529374357,
+      "bone_rel_err_body": 1.061542220371798e-07,
+      "primary_excess_antic": 0.04342847004663896,
+      "missed_contact_total": 47,
+      "contact_distance_rmse_all": 0.19249051891530924,
+      "contact_distance_rmse_push": 0.21989113199866941,
+      "delta_mpjpe_pct": -0.2974155915208665,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk"
+        ],
+        "eligible": true
+      }
+    },
+    "B:endpoint": {
+      "xyz_mse": 0.019757070748308892,
+      "xyz_mae": 0.08292981418158844,
+      "mpjpe": 0.17025971611743032,
+      "dct_low_ratio": 0.633588187902874,
+      "dct_mid_ratio": 0.596521351338603,
+      "dct_high_ratio": 0.010570874115481256,
+      "jerk_body": 18.291887574682754,
+      "foot_penetration_ratio": 0.05473684210526316,
+      "slide_frame_ratio": 0.16515748985114195,
+      "step_count": 1.417808219178082,
+      "gait_sep_corr_f01_10": 0.44846045708923743,
+      "bone_rel_err_body": 1.0634055248942166e-07,
+      "primary_excess_antic": 0.03708716416197055,
+      "missed_contact_total": 55,
+      "contact_distance_rmse_all": 0.1865488183647513,
+      "contact_distance_rmse_push": 0.20061673890368398,
+      "delta_mpjpe_pct": -1.1429372871880839,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [],
+        "eligible": false
+      }
+    },
+    "B:sample": {
+      "xyz_mse": 0.029132196451593866,
+      "xyz_mae": 0.10316322380412928,
+      "mpjpe": 0.21196501223212072,
+      "dct_low_ratio": 0.9975638814286125,
+      "dct_mid_ratio": 0.47255868729985717,
+      "dct_high_ratio": 0.035948363932780905,
+      "jerk_body": 28.836762827529448,
+      "foot_penetration_ratio": 0.10944331983805668,
+      "slide_frame_ratio": 0.10019286647016554,
+      "step_count": 1.7808219178082194,
+      "gait_sep_corr_f01_10": 0.4450101347935425,
+      "bone_rel_err_body": 1.0719999878130565e-07,
+      "primary_excess_antic": 0.051349156737395756,
+      "missed_contact_total": 38.8125,
+      "contact_distance_rmse_all": 0.23068153095776653,
+      "contact_distance_rmse_push": 0.26412677633745224,
+      "energy_score": 0.2065048773543377,
+      "delta_mpjpe_pct": 23.07220395398928,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "penetration"
+        ],
+        "eligible": false
+      }
+    },
+    "BR:ode0": {
+      "xyz_mse": 0.02015073905861088,
+      "xyz_mae": 0.08203622192023736,
+      "mpjpe": 0.1691089686353197,
+      "dct_low_ratio": 0.626536431518481,
+      "dct_mid_ratio": 0.23210420299426626,
+      "dct_high_ratio": 0.011087612231965199,
+      "jerk_body": 15.373347408535,
+      "foot_penetration_ratio": 0.0680161943319838,
+      "slide_frame_ratio": 0.198842345672602,
+      "step_count": 1.3904109589041096,
+      "gait_sep_corr_f01_10": 0.4601042112187775,
+      "bone_rel_err_body": 1.059678918384041e-07,
+      "primary_excess_antic": 0.033029980545505065,
+      "missed_contact_total": 43,
+      "contact_distance_rmse_all": 0.19179383788048257,
+      "contact_distance_rmse_push": 0.20695012098748178,
+      "delta_mpjpe_pct": -1.8110901456549588,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [],
+        "eligible": true
+      }
+    },
+    "BR:median16": {
+      "xyz_mse": 0.019360062858534727,
+      "xyz_mae": 0.08206977487093041,
+      "mpjpe": 0.16885148024993388,
+      "dct_low_ratio": 0.5367393128650466,
+      "dct_mid_ratio": 0.3843877683594124,
+      "dct_high_ratio": 0.0687294886730578,
+      "jerk_body": 46.335725861081116,
+      "foot_penetration_ratio": 0.06109311740890688,
+      "slide_frame_ratio": 0.18283767035760667,
+      "step_count": 1.3972602739726028,
+      "gait_sep_corr_f01_10": 0.4344807461519307,
+      "bone_rel_err_body": 1.0610197323797622e-07,
+      "primary_excess_antic": 0.038659102807196116,
+      "missed_contact_total": 44,
+      "contact_distance_rmse_all": 0.19376869561166413,
+      "contact_distance_rmse_push": 0.20153054478514235,
+      "delta_mpjpe_pct": -1.9605943621682331,
+      "decision": {
+        "l2_not_worse": true,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk",
+          "dct_high"
+        ],
+        "eligible": true
+      }
+    },
+    "BR:median16t05": {
+      "xyz_mse": 0.01967016903133045,
+      "xyz_mae": 0.08146086341215049,
+      "mpjpe": 0.16776809578965068,
+      "dct_low_ratio": 0.5909060096122842,
+      "dct_mid_ratio": 0.26005151561956835,
+      "dct_high_ratio": 0.02282733999540395,
+      "jerk_body": 27.087799786483185,
+      "foot_penetration_ratio": 0.06218623481781377,
+      "slide_frame_ratio": 0.1923310778302182,
+      "step_count": 1.4726027397260273,
+      "gait_sep_corr_f01_10": 0.45194546061585017,
+      "bone_rel_err_body": 1.059128430636977e-07,
+      "primary_excess_antic": 0.036540384012364195,
+      "missed_contact_total": 46,
+      "contact_distance_rmse_all": 0.19114733235992742,
+      "contact_distance_rmse_push": 0.2042309172119089,
+      "delta_mpjpe_pct": -2.5896345601351567,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk"
+        ],
+        "eligible": true
+      }
+    },
+    "BR:endpoint": {
+      "xyz_mse": 0.019428869392647433,
+      "xyz_mae": 0.08258060203028111,
+      "mpjpe": 0.1695039046679431,
+      "dct_low_ratio": 0.6151978798283313,
+      "dct_mid_ratio": 0.5882788677223836,
+      "dct_high_ratio": 0.011714077487797993,
+      "jerk_body": 18.659552480989557,
+      "foot_penetration_ratio": 0.054048582995951416,
+      "slide_frame_ratio": 0.16108724123675028,
+      "step_count": 1.4863013698630136,
+      "gait_sep_corr_f01_10": 0.5172399396116846,
+      "bone_rel_err_body": 1.0583952203066165e-07,
+      "primary_excess_antic": 0.029847683558156268,
+      "missed_contact_total": 48,
+      "contact_distance_rmse_all": 0.18440481973910472,
+      "contact_distance_rmse_push": 0.21156814052367287,
+      "delta_mpjpe_pct": -1.5817803768211403,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [],
+        "eligible": false
+      }
+    },
+    "BR:sample": {
+      "xyz_mse": 0.02934648623776731,
+      "xyz_mae": 0.10436748497203174,
+      "mpjpe": 0.21415807358045807,
+      "dct_low_ratio": 1.1171212964316295,
+      "dct_mid_ratio": 2.2461403317632884,
+      "dct_high_ratio": 0.13449143338240285,
+      "jerk_body": 33.429874097521434,
+      "foot_penetration_ratio": 0.11185222672064778,
+      "slide_frame_ratio": 0.10488332890221508,
+      "step_count": 1.8082191780821917,
+      "gait_sep_corr_f01_10": 0.3918210898457399,
+      "bone_rel_err_body": 1.0689176493660977e-07,
+      "primary_excess_antic": 0.04607392718675834,
+      "missed_contact_total": 36.0,
+      "contact_distance_rmse_all": 0.23164229853265023,
+      "contact_distance_rmse_push": 0.2660609631852813,
+      "energy_score": 0.20829586844670783,
+      "delta_mpjpe_pct": 24.34555039312056,
+      "decision": {
+        "l2_not_worse": false,
+        "score_adopt": false,
+        "interaction_adopt": false,
+        "failed_guards": [
+          "jerk",
+          "penetration",
+          "dct_high",
+          "gait_f01_10"
+        ],
+        "eligible": false
+      }
+    }
+  }
+}

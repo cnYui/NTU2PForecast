@@ -71,6 +71,20 @@ STG_PARTS = (
     tuple(_STATE_ROW[j] for j in (2, 5, 8, 11)),
 )
 TORSO_PART, ARM_PARTS = 0, (1, 2)
+# 细粒度关节组（13 组）：手、肘、肩、胸、头分开，使"A 的手 ↔ B 的肩"成为独立的跨人边。
+STG_PARTS_FINE = tuple(
+    tuple(_STATE_ROW[j] for j in group)
+    for group in (
+        (0, 3), (6, 9), (12, 15, 22, 23, 24),  # 骨盆+spine1、胸、头颈
+        (13, 16), (14, 17), (18,), (19,),  # 左/右肩带、左/右肘
+        (20, 25, 31), (21, 40, 46),  # 左/右手（腕 + 两指根）
+        (1, 4), (2, 5), (7, 10), (8, 11),  # 左/右大腿、左/右脚
+    )
+)
+PART_SCHEMES = OrderedDict([("coarse", STG_PARTS), ("fine", STG_PARTS_FINE)])
+# 跨人距离边：关节组质心距离的 RBF 展开（中心 0–1.4 m、宽 0.2 m），覆盖接触到明显分开的范围。
+GEO_RBF_CENTERS = tuple(0.2 * k for k in range(8))
+GEO_RBF_WIDTH = 0.2
 # 自条件关系曲线：本人双手→对方躯干、对方双手→本人躯干的距离，各自接近速度与因果接触记忆。
 REL_CHANNELS = 12
 GRAPH_FEATURES = 3
@@ -104,6 +118,8 @@ CONFIG_KEYS = (
     "ramp_mode",
     "ramp_saturate_frames",
     "canonical_ab_fallback",
+    "part_scheme",
+    "joint_graph",
 )
 
 
@@ -286,8 +302,10 @@ class STGDenoiser(nn.Module):
     BOTTLENECK = 128
 
     def __init__(self, obs_len, pred_len, patch_len, width, heads, num_blocks, cond_dim, dropout, self_cond, contact_graph,
-                 causal_cross, codec, mlp_ratio=4):
+                 causal_cross, codec, mlp_ratio=4, parts=STG_PARTS, joint_graph=False):
         super(STGDenoiser, self).__init__()
+        self.parts = tuple(tuple(part) for part in parts)
+        self.joint_graph = bool(joint_graph)
         self.obs_len, self.pred_len, self.patch_len = int(obs_len), int(pred_len), int(patch_len)
         if self.obs_len % self.patch_len or self.pred_len % self.patch_len:
             raise ValueError("obs_len 与 pred_len 必须能被 patch_len 整除")
@@ -302,10 +320,10 @@ class STGDenoiser(nn.Module):
         self.embed = nn.ModuleList(
             [
                 nn.Sequential(nn.Linear(self.patch_len * len(part) * XYZ_COORD_DIM * channels, self.BOTTLENECK), nn.Linear(self.BOTTLENECK, self.width))
-                for part in STG_PARTS
+                for part in self.parts
             ]
         )
-        num_parts = len(STG_PARTS)
+        num_parts = len(self.parts)
         self.patch_pos = nn.Parameter(torch.randn(self.num_patches, self.width) * 0.02)
         self.part_pos = nn.Parameter(torch.randn(num_parts, self.width) * 0.02)
         self.role_pos = nn.Parameter(torch.randn(2, self.width) * 0.02)
@@ -321,12 +339,18 @@ class STGDenoiser(nn.Module):
             for layer in (self.graph_recv, self.graph_send):
                 nn.init.zeros_(layer.weight)
                 nn.init.zeros_(layer.bias)
+        if self.joint_graph:
+            # 零初始化：初始时与同部位划分、无距离边的模型逐位相同。
+            self.geo_edge = nn.Linear(len(GEO_RBF_CENTERS), self.heads)
+            nn.init.zeros_(self.geo_edge.weight)
+            nn.init.zeros_(self.geo_edge.bias)
+            self.register_buffer("geo_centers", torch.tensor(GEO_RBF_CENTERS), persistent=False)
         self.blocks = nn.ModuleList([_STGBlock(self.width, self.heads, cond_dim, mlp_ratio, dropout) for _ in range(num_blocks)])
         self.final_norm = RMSNorm(self.width, affine=False)
         self.final_ada = nn.Linear(cond_dim, 2 * self.width)
         nn.init.zeros_(self.final_ada.weight)
         nn.init.zeros_(self.final_ada.bias)
-        self.out = nn.ModuleList([nn.Linear(self.width, self.patch_len * len(part) * XYZ_COORD_DIM) for part in STG_PARTS])
+        self.out = nn.ModuleList([nn.Linear(self.width, self.patch_len * len(part) * XYZ_COORD_DIM) for part in self.parts])
         for layer in self.out:
             nn.init.zeros_(layer.weight)
             nn.init.zeros_(layer.bias)
@@ -335,7 +359,7 @@ class STGDenoiser(nn.Module):
 
     def _register_index(self):
         """token 顺序 (人物, 部位, 时间块)；预存成对索引，偏置/掩码每次前向只做一次 gather。"""
-        num_parts, num_patches = len(STG_PARTS), self.num_patches
+        num_parts, num_patches = len(self.parts), self.num_patches
         person = torch.arange(2).view(2, 1, 1).expand(2, num_parts, num_patches).reshape(-1)
         part = torch.arange(num_parts).view(1, num_parts, 1).expand(2, num_parts, num_patches).reshape(-1)
         patch = torch.arange(num_patches).view(1, 1, num_patches).expand(2, num_parts, num_patches).reshape(-1)
@@ -358,7 +382,7 @@ class STGDenoiser(nn.Module):
     def _graph_bias(self, graph):
         """graph [B,2(手的主人 q),2(手 h),P,F] -> [B,h,N,N]：躯干查询看对方手臂键、手臂查询看对方躯干键。"""
         batch_size = int(graph.shape[0])
-        num_parts, num_patches = len(STG_PARTS), self.num_patches
+        num_parts, num_patches = len(self.parts), self.num_patches
         bias = graph.new_zeros(batch_size, self.heads, 2, num_parts, num_patches, 2, num_parts, num_patches)
         recv = self.graph_recv(graph).permute(0, 4, 1, 2, 3)  # [B,h,q,hand,P]
         send = self.graph_send(graph).permute(0, 4, 1, 2, 3)
@@ -372,17 +396,26 @@ class STGDenoiser(nn.Module):
         size = 2 * num_parts * num_patches
         return bias.view(batch_size, self.heads, size, size)
 
+    def _geo_bias(self, geo):
+        """geo [B,2,部位,时间块,3]（场景系质心）-> [B,h,N,N]：跨人 token 对按质心距离的 RBF 加偏置，同人为 0。"""
+        batch_size = int(geo.shape[0])
+        points = geo.reshape(batch_size, -1, XYZ_COORD_DIM)  # 与 token 顺序 (人物, 部位, 时间块) 一致
+        distance = (points.unsqueeze(2) - points.unsqueeze(1)).norm(dim=-1)  # [B,N,N]
+        rbf = torch.exp(-((distance.unsqueeze(-1) - self.geo_centers.to(distance.dtype)) / GEO_RBF_WIDTH).pow(2))
+        bias = self.geo_edge(rbf).permute(0, 3, 1, 2)  # [B,h,N,N]
+        return bias * self.pair_cross.to(bias.dtype)
+
     def _patchify(self, traj):
         """[B,T,2,29,3] -> 每个部位 [B,2,T/patch,patch*n*3]。"""
         batch_size, frames = int(traj.shape[0]), int(traj.shape[1])
         out = []
-        for part in STG_PARTS:
+        for part in self.parts:
             value = traj[:, :, :, list(part)]  # [B,T,2,n,3]
             value = value.view(batch_size, frames // self.patch_len, self.patch_len, 2, len(part), XYZ_COORD_DIM)
             out.append(value.permute(0, 3, 1, 2, 4, 5).reshape(batch_size, 2, frames // self.patch_len, -1))
         return out
 
-    def forward(self, prep, z_root, z_local, cond, sc=None, graph=None, scales=(1.0, 1.0)):
+    def forward(self, prep, z_root, z_local, cond, sc=None, graph=None, scales=(1.0, 1.0), geo=None):
         root_scale, local_scale = scales
         obs_state = (prep["obs_person"] - prep["last_person"].unsqueeze(1))[:, :, :, list(STATE_JOINTS)]
         noisy = self.codec.decode(z_root * root_scale, z_local * local_scale)
@@ -410,15 +443,17 @@ class STGDenoiser(nn.Module):
         bias = self._static_bias()
         if self.contact_graph and graph is not None:
             bias = bias + self._graph_bias(graph)
+        if self.joint_graph and geo is not None:
+            bias = bias + self._geo_bias(geo)
         for block in self.blocks:
             tokens = block(tokens, cond, bias)
         shift, scale = self.final_ada(cond).unsqueeze(2).chunk(2, dim=-1)
         normed = self.final_norm(tokens) * (1.0 + scale) + shift
         ctx = normed.mean(dim=2)
-        normed = normed.view(batch_size, 2, len(STG_PARTS), self.num_patches, self.width)[:, :, :, self.num_obs_patches :]
+        normed = normed.view(batch_size, 2, len(self.parts), self.num_patches, self.width)[:, :, :, self.num_obs_patches :]
         traj = noisy.new_zeros(batch_size, self.pred_len, 2, NUM_STATE, XYZ_COORD_DIM)
         num_future = self.num_patches - self.num_obs_patches
-        for index, (part, layer) in enumerate(zip(STG_PARTS, self.out)):
+        for index, (part, layer) in enumerate(zip(self.parts, self.out)):
             value = layer(normed[:, :, index]).view(batch_size, 2, num_future, self.patch_len, len(part), XYZ_COORD_DIM)
             value = value.permute(0, 2, 3, 1, 4, 5).reshape(batch_size, self.pred_len, 2, len(part), XYZ_COORD_DIM)
             traj[:, :, :, list(part)] = value
@@ -463,6 +498,8 @@ class NTU2PJiTFlow(nn.Module):
         ramp_mode="saturate",
         ramp_saturate_frames=5,
         canonical_ab_fallback="camera_x",
+        part_scheme="coarse",
+        joint_graph=False,
     ):
         super(NTU2PJiTFlow, self).__init__()
         self.model_type = MODEL_TYPE
@@ -475,6 +512,13 @@ class NTU2PJiTFlow(nn.Module):
         if contact_graph and not self_cond:
             # 接触图读的是模型自己上一轮的估计；没有自条件就只能读 copy-last，图没有信息。
             raise ValueError("contact_graph 需要 self_cond")
+        if part_scheme not in PART_SCHEMES:
+            raise ValueError("part_scheme 必须是 {}".format(tuple(PART_SCHEMES)))
+        if part_scheme != "coarse" and (denoiser != "stg" or contact_graph):
+            raise ValueError("细粒度部位只用于 stg 去噪器，且不与按粗部位定义的 contact_graph 同用")
+        if joint_graph and not (denoiser == "stg" and self_cond):
+            raise ValueError("joint_graph 需要 stg 去噪器与 self_cond（距离边读自己的上一轮估计）")
+        self.part_scheme, self.joint_graph = str(part_scheme), bool(joint_graph)
         self.denoiser_type = str(denoiser)
         self.self_cond, self.contact_graph, self.causal_cross = bool(self_cond), bool(contact_graph), bool(causal_cross)
         self.obs_len, self.pred_len, self.num_actions = int(obs_len), int(pred_len), int(num_actions)
@@ -498,7 +542,8 @@ class NTU2PJiTFlow(nn.Module):
                                      self.num_blocks, self.mlp_ratio, self.cond_dim, self.dropout, self.self_cond, self.contact_graph)
         else:
             self.net = STGDenoiser(self.obs_len, self.pred_len, self.patch_len, self.stg_width, self.stg_heads, self.stg_blocks,
-                                   self.cond_dim, self.dropout, self.self_cond, self.contact_graph, self.causal_cross, self.codec)
+                                   self.cond_dim, self.dropout, self.self_cond, self.contact_graph, self.causal_cross, self.codec,
+                                   parts=PART_SCHEMES[self.part_scheme], joint_graph=self.joint_graph)
         self.leg_net = FlowLegStream(self.obs_len, self.root_k, self.local_k, self.net.ctx_dim, self.cond_dim, self.self_cond)
         weights = torch.ones(NTU_SMPLX_BODY_JOINTS, dtype=torch.float64)
         weights[25:] = 0.0
@@ -509,6 +554,8 @@ class NTU2PJiTFlow(nn.Module):
         self.num_samples = 16
         self.nfe_steps = 20
         self.solver = "heun"
+        # 初始噪声的倍数：0 为从噪声分布中心出发的确定性 ODE；乘 1.0 在浮点上精确，默认读出逐位不变。
+        self.temperature = 1.0
         self.reset_sampler(0)
 
     # ------------------------------------------------------------------ 配置与条件
@@ -619,6 +666,20 @@ class NTU2PJiTFlow(nn.Module):
         graph = graph.view(batch_size, patches, self.patch_len, 2, 2, GRAPH_FEATURES).mean(dim=2)
         return None, graph.permute(0, 2, 3, 1, 4)  # [B,2,2,P,3]
 
+    def _part_centroids(self, prep, sc):
+        """自条件估计（无则 copy-last）-> 场景规范系完整 60 帧 -> 每人每关节组每个 5 帧块的质心 [B,2,部位,块,3]。"""
+        batch_size = int(prep["obs_canon"].shape[0])
+        if sc is None:
+            delta = prep["obs_canon"].new_zeros(batch_size, self.pred_len, 2, NTU_SMPLX_BODY_JOINTS, XYZ_COORD_DIM)
+        else:
+            delta = self.residual55(sc[0], sc[1])
+        full = torch.cat((prep["obs_canon"], prep["obs_canon"][:, -1:] + self._to_person(delta)), dim=1)
+        parts = PART_SCHEMES[self.part_scheme]
+        centroids = torch.stack([full[:, :, :, [STATE_JOINTS[row] for row in part]].mean(dim=3) for part in parts], dim=3)  # [B,60,2,P,3]
+        patches = (self.obs_len + self.pred_len) // self.patch_len
+        centroids = centroids.view(batch_size, patches, self.patch_len, 2, len(parts), XYZ_COORD_DIM).mean(dim=2)
+        return centroids.permute(0, 2, 3, 1, 4)
+
     # ------------------------------------------------------------------ 去噪
 
     def denoise(self, prep, z_root, z_local, t, sc=None):
@@ -632,7 +693,8 @@ class NTU2PJiTFlow(nn.Module):
         if self.denoiser_type == "mixer":
             root, local, ctx = self.net(prep, z_root, z_local, cond, sc=sc, rel=rel)
         else:
-            root, local, ctx = self.net(prep, z_root, z_local, cond, sc=sc, graph=graph, scales=(self.root_scale, self.local_scale))
+            geo = self._part_centroids(prep, sc) if self.joint_graph else None
+            root, local, ctx = self.net(prep, z_root, z_local, cond, sc=sc, graph=graph, scales=(self.root_scale, self.local_scale), geo=geo)
         return self._legs(prep, root, local, ctx, cond, z_local, sc)
 
     def _legs(self, prep, root, local, ctx, cond, z_local, sc):
@@ -676,8 +738,8 @@ class NTU2PJiTFlow(nn.Module):
         solver = solver or self.solver
         batch_size = int(prep["obs_xyz"].shape[0])
         reference = prep["obs_xyz"]
-        z_root = self._noise((batch_size, 2, self.root_k, XYZ_COORD_DIM), reference)
-        z_local = self._noise((batch_size, 2, self.local_k, NUM_LOCAL, XYZ_COORD_DIM), reference)
+        z_root = self._noise((batch_size, 2, self.root_k, XYZ_COORD_DIM), reference) * self.temperature
+        z_local = self._noise((batch_size, 2, self.local_k, NUM_LOCAL, XYZ_COORD_DIM), reference) * self.temperature
         grid = torch.linspace(0.0, 1.0, steps + 1, dtype=reference.dtype, device=reference.device)
         sc = None
         for index in range(steps):

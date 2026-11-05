@@ -1,0 +1,93 @@
+{
+  "GT": {
+    "step_count": 2.287671232876712,
+    "slide_frame_ratio": 0.03444660175274389,
+    "stance_fraction": 0.34780821917808213,
+    "ankle_peak_to_root_speed": 4.533066499854868,
+    "foot_rel_motion_ratio": 1.4541802819188667,
+    "lr_forward_vel_corr": -0.3897961346421279,
+    "skate_gt_contact_speed_walk": 0.10040597131374468,
+    "skate_self_ratio_walk": 0.5217625656919552,
+    "leg_swing_amp": 0.14075132526870615,
+    "gait_sep_corr_f01_10": 1.0,
+    "mpjpe": 0.0
+  },
+  "GT 经编解码 root8 local11": {
+    "step_count": 2.219178082191781,
+    "slide_frame_ratio": 0.0451991382280521,
+    "stance_fraction": 0.31630136986301377,
+    "ankle_peak_to_root_speed": 4.389335156976582,
+    "foot_rel_motion_ratio": 1.4227732481813986,
+    "lr_forward_vel_corr": -0.39812884810164473,
+    "skate_gt_contact_speed_walk": 0.15885438258814732,
+    "skate_self_ratio_walk": 0.5567633670765677,
+    "leg_swing_amp": 0.13996859209905427,
+    "gait_sep_corr_f01_10": 0.86269139433418,
+    "mpjpe": 0.022472204304299997
+  },
+  "GT 经编解码 root8 local20": {
+    "step_count": 2.267123287671233,
+    "slide_frame_ratio": 0.03753558890082691,
+    "stance_fraction": 0.31972602739726025,
+    "ankle_peak_to_root_speed": 4.606179569405696,
+    "foot_rel_motion_ratio": 1.4993172448338234,
+    "lr_forward_vel_corr": -0.372533864310155,
+    "skate_gt_contact_speed_walk": 0.137450434047884,
+    "skate_self_ratio_walk": 0.5512360311547578,
+    "leg_swing_amp": 0.14065924339988703,
+    "gait_sep_corr_f01_10": 0.9430622626743664,
+    "mpjpe": 0.018544293502277476
+  },
+  "GT 经编解码 root8 local30": {
+    "step_count": 2.2945205479452055,
+    "slide_frame_ratio": 0.04254669560307953,
+    "stance_fraction": 0.3203424657534246,
+    "ankle_peak_to_root_speed": 4.65050910696707,
+    "foot_rel_motion_ratio": 1.5104007579082317,
+    "lr_forward_vel_corr": -0.3716949508340808,
+    "skate_gt_contact_speed_walk": 0.1326572116195173,
+    "skate_self_ratio_walk": 0.554140127388535,
+    "leg_swing_amp": 0.1407274359783582,
+    "gait_sep_corr_f01_10": 0.964925770118128,
+    "mpjpe": 0.016209095351739044
+  },
+  "GT 经编解码 root20 local50": {
+    "step_count": 2.287671232876712,
+    "slide_frame_ratio": 0.0415618112151814,
+    "stance_fraction": 0.3389041095890411,
+    "ankle_peak_to_root_speed": 4.493912904184139,
+    "foot_rel_motion_ratio": 1.4520185588141643,
+    "lr_forward_vel_corr": -0.3916673883733446,
+    "skate_gt_contact_speed_walk": 0.10907880871805381,
+    "skate_self_ratio_walk": 0.5300424843212624,
+    "leg_swing_amp": 0.1407513258769473,
+    "gait_sep_corr_f01_10": 0.9999999999993865,
+    "mpjpe": 0.007777964495108218
+  },
+  "预测 BR_ode0": {
+    "step_count": 1.3904109589041096,
+    "slide_frame_ratio": 0.198842345672602,
+    "stance_fraction": 0.445,
+    "ankle_peak_to_root_speed": 3.2602174167614915,
+    "foot_rel_motion_ratio": 1.0576455328792458,
+    "lr_forward_vel_corr": -0.06854512374040465,
+    "skate_gt_contact_speed_walk": 0.20623637978451737,
+    "skate_self_ratio_walk": 0.4878358635584069,
+    "leg_swing_amp": 0.1104531690951425,
+    "gait_sep_corr_f01_10": 0.4601042112187775,
+    "mpjpe": 0.16910897474551154
+  },
+  "预测 FD2": {
+    "step_count": 1.4589041095890412,
+    "slide_frame_ratio": 0.200354275498129,
+    "stance_fraction": 0.4601369863013699,
+    "ankle_peak_to_root_speed": 2.586603007992846,
+    "foot_rel_motion_ratio": 0.8079441033719809,
+    "lr_forward_vel_corr": -0.1451233061227919,
+    "skate_gt_contact_speed_walk": 0.1990854072666448,
+    "skate_self_ratio_walk": 0.4860280097310803,
+    "leg_swing_amp": 0.09202566443290443,
+    "gait_sep_corr_f01_10": 0.46789617604532857,
+    "mpjpe": 0.17222818294578268
+  }
+}
