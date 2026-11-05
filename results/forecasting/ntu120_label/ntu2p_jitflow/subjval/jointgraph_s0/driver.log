@@ -1,0 +1,26 @@
+评价 BR
+训练 G1 s0
+训练 G2 s0
+完成 BR
+评价 G1
+完成 G1
+Traceback (most recent call last):
+  File "scripts/run_ntu2p_jointgraph.py", line 140, in <module>
+    main()
+  File "scripts/run_ntu2p_jointgraph.py", line 135, in main
+    future.result()
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/concurrent/futures/_base.py", line 428, in result
+    return self.__get_result()
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/concurrent/futures/_base.py", line 384, in __get_result
+    raise self._exception
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/concurrent/futures/thread.py", line 57, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "scripts/run_ntu2p_jointgraph.py", line 41, in job
+    checkpoint = train_candidate(opts, name, 0, protocol, log)
+  File "/home/rpartx3080/CodeSpace/NTU2PForecast/scripts/run_ntu2p_bandflow.py", line 89, in train_candidate
+    + S2_5_RECIPE + FD2_ADDONS + CANDIDATES[name] + common_args(protocol), log)
+  File "/home/rpartx3080/CodeSpace/NTU2PForecast/scripts/run_ntu2p_jitflow.py", line 77, in run
+    subprocess.run(command, cwd=str(ROOT), env=env, stdout=handle, stderr=subprocess.STDOUT, check=True)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/subprocess.py", line 512, in run
+    output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/rpartx3080/.local/micromamba/envs/regennet/bin/python', 'train/train_ntu2p_jitflow.py', '--save_dir', 'save/forecasting/ntu120_label/ntu2p_bandflow_subjval_G2_s0_10000', '--num_steps', '10000', '--seed', '0', '--save_interval', '10000', '--baseline_checkpoint', 'save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt', '--loss_scale_normalize', '--local_velocity_loss_weight', '1.0', '--ramp_mode', 'saturate', '--ramp_saturate_frames', '5', '--dct_low_amplitude_loss_weight', '1.0', '--dct_mid_amplitude_loss_weight', '1.0', '--root_loss_weight', '0.1', '--inter_loss_weight', '0.01', '--ema_decay', '0.999', '--batch_size', '8', '--log_interval', '100', '--canonical_ab_fallback', 'camera_x', '--foot_loss_weight', '0.05', '--kin_proj', '--leg_gait_loss_weight', '0.5', '--dct_mid_exclude_legs', '--loss_joint_subset', 'hand2', '--denoiser', 'stg', '--self_cond', '--t_uniform_mix', '0.5', '--causal_cross', '--flow_kwargs', '{"local_k": 11, "part_scheme": "fine", "joint_graph": true}', '--flow_recipe_weight', '1.0', '--flow_recipe_t_min', '0.5', '--contact_curve_weight', '1.0', '--proximity_curve_weight', '1.0', '--manifest_path', 'results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json', '--cache_dir', 'results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval', '--device', 'cuda:0']' returned non-zero exit status 1.

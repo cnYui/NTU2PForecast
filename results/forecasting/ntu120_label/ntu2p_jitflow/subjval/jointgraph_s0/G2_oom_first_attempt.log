@@ -1,0 +1,21 @@
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python train/train_ntu2p_jitflow.py --save_dir save/forecasting/ntu120_label/ntu2p_bandflow_subjval_G2_s0_10000 --num_steps 10000 --seed 0 --save_interval 10000 --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --loss_scale_normalize --local_velocity_loss_weight 1.0 --ramp_mode saturate --ramp_saturate_frames 5 --dct_low_amplitude_loss_weight 1.0 --dct_mid_amplitude_loss_weight 1.0 --root_loss_weight 0.1 --inter_loss_weight 0.01 --ema_decay 0.999 --batch_size 8 --log_interval 100 --canonical_ab_fallback camera_x --foot_loss_weight 0.05 --kin_proj --leg_gait_loss_weight 0.5 --dct_mid_exclude_legs --loss_joint_subset hand2 --denoiser stg --self_cond --t_uniform_mix 0.5 --causal_cross --flow_kwargs {"local_k": 11, "part_scheme": "fine", "joint_graph": true} --flow_recipe_weight 1.0 --flow_recipe_t_min 0.5 --contact_curve_weight 1.0 --proximity_curve_weight 1.0 --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0
+Training NTU2P JiT flow denoiser=stg self_cond=True contact_graph=False causal_cross=True: params=4772319 scales=(0.14063,0.18843) device=cuda:0
+Traceback (most recent call last):
+  File "train/train_ntu2p_jitflow.py", line 341, in <module>
+    run(build_arg_parser().parse_args())
+  File "train/train_ntu2p_jitflow.py", line 275, in run
+    loss_r = recipe_flow_loss(model, prep, x_root, x_local, obs_xyz, target_xyz, args, loss_args, loss_scales)
+  File "train/train_ntu2p_jitflow.py", line 225, in recipe_flow_loss
+    root, local = model.denoise(prep, z_root, z_local, t, sc=sc)
+  File "/home/rpartx3080/CodeSpace/NTU2PForecast/model/forecasting_ntu2p_jitflow.py", line 697, in denoise
+    root, local, ctx = self.net(prep, z_root, z_local, cond, sc=sc, graph=graph, scales=(self.root_scale, self.local_scale), geo=geo)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 727, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/rpartx3080/CodeSpace/NTU2PForecast/model/forecasting_ntu2p_jitflow.py", line 449, in forward
+    tokens = block(tokens, cond, bias)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 727, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/rpartx3080/CodeSpace/NTU2PForecast/model/forecasting_ntu2p_jitflow.py", line 293, in forward
+    tokens = tokens + gate1 * self.proj(out)
+RuntimeError: CUDA out of memory. Tried to allocate 20.00 MiB (GPU 0; 9.76 GiB total capacity; 1.64 GiB already allocated; 25.44 MiB free; 1.68 GiB reserved in total by PyTorch)

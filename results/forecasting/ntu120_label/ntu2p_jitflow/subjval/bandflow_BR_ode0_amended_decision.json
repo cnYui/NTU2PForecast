@@ -1,0 +1,23 @@
+{
+  "amendment": "docs/ai/context/20261104-090141-ntu2p-bandflow-mse-tolerance-amendment.md",
+  "row": "BR:ode0",
+  "ratios": {
+    "xyz_mse": 1.0277749439694346,
+    "xyz_mae": 0.9725831491357009,
+    "mpjpe": 0.9776468505820977,
+    "jerk_body": 0.7746870946736852
+  },
+  "per_seed_xyz_mse_ratio": [
+    1.0438348343937687,
+    1.0134975239378725,
+    1.026284494961161
+  ],
+  "checks": {
+    "xyz_mse<=1.05x": true,
+    "xyz_mae<=1.005x": true,
+    "mpjpe<=0.992x": true,
+    "guards": true
+  },
+  "original_rule_score_adopt": false,
+  "amended_rule_adopt": true
+}

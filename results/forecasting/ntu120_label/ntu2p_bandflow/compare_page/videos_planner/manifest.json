@@ -1,0 +1,119 @@
+[
+  {
+    "index": 194,
+    "group": "随机（固定审查集）",
+    "sample_id": "S026C001P074R001A022",
+    "action": "follow",
+    "mpjpe": {
+      "FD2": 0.31409644543827947,
+      "BR_ode0": 0.3326674677977379,
+      "BR_plan": 0.33247412424888334
+    },
+    "video": "case_194_S026C001P074R001A022.mp4",
+    "poster": "case_194_S026C001P074R001A022.jpg"
+  },
+  {
+    "index": 216,
+    "group": "随机（固定审查集）",
+    "sample_id": "S029C001P049R002A020",
+    "action": "carry together",
+    "mpjpe": {
+      "FD2": 0.1515140764809659,
+      "BR_ode0": 0.17912757131897603,
+      "BR_plan": 0.180559714584394
+    },
+    "video": "case_216_S029C001P049R002A020.mp4",
+    "poster": "case_216_S029C001P049R002A020.jpg"
+  },
+  {
+    "index": 98,
+    "group": "随机（固定审查集）",
+    "sample_id": "S012C001P027R001A006",
+    "action": "hugging",
+    "mpjpe": {
+      "FD2": 0.2881666574120916,
+      "BR_ode0": 0.30974788515315727,
+      "BR_plan": 0.3100898896760093
+    },
+    "video": "case_098_S012C001P027R001A006.mp4",
+    "poster": "case_098_S012C001P027R001A006.jpg"
+  },
+  {
+    "index": 10,
+    "group": "随机（固定审查集）",
+    "sample_id": "S001C001P004R001A011",
+    "action": "walking apart",
+    "mpjpe": {
+      "FD2": 0.13086938201410234,
+      "BR_ode0": 0.1751085845293412,
+      "BR_plan": 0.17479691318365767
+    },
+    "video": "case_010_S001C001P004R001A011.mp4",
+    "poster": "case_010_S001C001P004R001A011.jpg"
+  },
+  {
+    "index": 107,
+    "group": "随机（固定审查集）",
+    "sample_id": "S012C001P027R002A007",
+    "action": "giving something",
+    "mpjpe": {
+      "FD2": 0.09256097670914203,
+      "BR_ode0": 0.09472564743543811,
+      "BR_plan": 0.09450242781643682
+    },
+    "video": "case_107_S012C001P027R002A007.mp4",
+    "poster": "case_107_S012C001P027R002A007.jpg"
+  },
+  {
+    "index": 227,
+    "group": "随机（固定审查集）",
+    "sample_id": "S029C001P089R001A026",
+    "action": "rock-paper-scissors",
+    "mpjpe": {
+      "FD2": 0.17790467138742383,
+      "BR_ode0": 0.13760917614018786,
+      "BR_plan": 0.13741260242702402
+    },
+    "video": "case_227_S029C001P089R001A026.mp4",
+    "poster": "case_227_S029C001P089R001A026.jpg"
+  },
+  {
+    "index": 28,
+    "group": "推人（固定审查集）",
+    "sample_id": "S005C001P004R002A003",
+    "action": "pushing",
+    "mpjpe": {
+      "FD2": 0.18651375914969653,
+      "BR_ode0": 0.20096051260040854,
+      "BR_plan": 0.19909005456681436
+    },
+    "video": "case_028_S005C001P004R002A003.mp4",
+    "poster": "case_028_S005C001P004R002A003.jpg"
+  },
+  {
+    "index": 2,
+    "group": "推人（固定审查集）",
+    "sample_id": "S001C001P004R001A003",
+    "action": "pushing",
+    "mpjpe": {
+      "FD2": 0.14900927025839739,
+      "BR_ode0": 0.14040752815788624,
+      "BR_plan": 0.13951709040526966
+    },
+    "video": "case_002_S001C001P004R001A003.mp4",
+    "poster": "case_002_S001C001P004R001A003.jpg"
+  },
+  {
+    "index": 225,
+    "group": "BR:ode0 相对 FD2 误差增加最多",
+    "sample_id": "S029C001P089R001A020",
+    "action": "carry together",
+    "mpjpe": {
+      "FD2": 0.2783952486275648,
+      "BR_ode0": 0.37965798091658753,
+      "BR_plan": 0.3783472297704856
+    },
+    "video": "case_225_S029C001P089R001A020.mp4",
+    "poster": "case_225_S029C001P089R001A020.jpg"
+  }
+]

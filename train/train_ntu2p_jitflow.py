@@ -5,7 +5,9 @@
 每步两次前向：
 1. 确定性端点（t=0、z=0，自条件模型按概率先跑一遍无梯度估计）：施加与 FD2 相同的完整损失配方；
 2. 随机 t 去噪：JiT 的 x 预测 + v-loss，root 与局部两组各取均值再平均（root 只占 1.4% 的元素，
-   按元素平均会让整体平移几乎不受去噪监督），权重 --flow_loss_weight。
+   按元素平均会让整体平移几乎不受去噪监督），权重 --flow_loss_weight；
+3. 可选（--flow_recipe_weight > 0）：t ~ U(--flow_recipe_t_min, 1) 的去噪估计也施加 FD2 配方，见
+   docs/ai/context/20261103-215324-ntu2p-diffusion-full-prediction-design-and-plan.md 3.2 节。
 命令行先给 FD2 的配方参数（S2_5_RECIPE + FD2 增量），--arch/--leg_stream 对本入口无意义，忽略。
 """
 
@@ -30,7 +32,10 @@ from train.train_ntu2p_v2 import (
     old_scale_starts,
 )
 from utils.fixseed import fixseed
-from utils.ntu_smplx_2p_xyz import XYZ_COORD_DIM
+from utils.ntu2p_contact_graph import contact_distance_loss
+from utils.ntu_smplx_2p_xyz import XYZ_COORD_DIM, copy_last_xyz
+
+BODY_JOINTS = 22
 
 
 PIPELINE = "ntu2p_xyz_seq_cache"
@@ -48,6 +53,8 @@ def check_args(args):
         raise ValueError("流模型的解码固定经过骨架投影，FD2 配方须带 --kin_proj（投影前输出的辅助项）")
     if not 0.0 <= args.sc_prob <= 1.0:
         raise ValueError("--sc_prob 必须在 [0,1]")
+    if args.flow_recipe_weight < 0 or not 0.0 <= args.flow_recipe_t_min < 1.0:
+        raise ValueError("--flow_recipe_weight 须 ≥ 0，--flow_recipe_t_min 须在 [0,1)")
 
 
 def estimate_coef_scales(args, cache, model_kwargs, device):
@@ -124,12 +131,63 @@ def endpoint_loss(model, prep, obs_xyz, target_xyz, args, loss_args, scales):
     t = obs_xyz.new_zeros(batch_size)
     sc = _maybe_self_cond(model, prep, z_root, z_local, t, args)
     root, local = model.denoise(prep, z_root, z_local, t, sc=sc)
+    return recipe_loss(model, prep, root, local, obs_xyz, target_xyz, args, loss_args, scales)
+
+
+def proximity_curve(xyz):
+    """[B,T,2,55,3] -> [B,T]：两人 22 个身体关节之间逐帧的最近距离。"""
+    body = xyz[..., :BODY_JOINTS, :]
+    return (body[:, :, 0].unsqueeze(3) - body[:, :, 1].unsqueeze(2)).norm(dim=-1).flatten(2).min(dim=-1).values
+
+
+def interaction_terms(pred, target):
+    """交互损失原始值：双向手—对方躯干距离曲线、两人身体最近距离曲线（设计 20261104-173254 第 4 节）。"""
+    return OrderedDict(
+        [
+            ("contact_curve", contact_distance_loss(pred, target)),
+            ("proximity_curve", torch.nn.functional.mse_loss(proximity_curve(pred), proximity_curve(target))),
+        ]
+    )
+
+
+def interaction_weights(args):
+    weights = OrderedDict([("contact_curve", float(args.contact_curve_weight)), ("proximity_curve", float(args.proximity_curve_weight))])
+    return OrderedDict((name, weight) for name, weight in weights.items() if weight > 0)
+
+
+def estimate_interaction_scales(args, cache):
+    """copy-last 在 train 上的交互损失值作归一化常量，窗口与 _estimate_scales 相同（每序列一个 seed 固定的起点）。"""
+    window_len = args.obs_len + args.pred_len
+    seq_index = torch.arange(len(cache), dtype=torch.long)
+    start = old_scale_starts(cache, args.seed, window_len)
+    sums, count = OrderedDict(), 0
+    with torch.no_grad():
+        for begin in range(0, len(cache), args.eval_batch_size):
+            end = min(begin + args.eval_batch_size, len(cache))
+            window = cache.gather_windows(seq_index[begin:end], start[begin:end], window_len)
+            obs, target = window[:, : args.obs_len], window[:, args.obs_len :]
+            size = int(obs.shape[0])
+            for name, value in interaction_terms(copy_last_xyz(obs, args.pred_len), target).items():
+                sums[name] = sums.get(name, 0.0) + float(value.cpu().item()) * size
+            count += size
+    return OrderedDict((name, max(value / count, 1e-8)) for name, value in sums.items())
+
+
+def recipe_loss(model, prep, root, local, obs_xyz, target_xyz, args, loss_args, scales):
+    """归一化系数 x̂ 解码后施加 FD2 完整损失配方（另加可选的交互损失）。"""
     pred, free, delta = model.decode_xyz(prep, root, local)
     details = OrderedDict([("pred", pred), ("pred_free", free), ("delta", delta)])
     loss, delta_reg = _loss_terms(*(_loss_joints(value, args) for value in (pred, delta, target_xyz, obs_xyz)), loss_args, scales=scales)
     extra, values, weighted = _extra_loss(details, target_xyz, obs_xyz, args, scales)
     if extra is not None:
         loss = loss + extra
+    weights = interaction_weights(args)
+    if weights:
+        for name, value in interaction_terms(pred, target_xyz).items():
+            if name in weights:
+                values[name] = value
+                weighted[name] = weights[name] * value / args.interaction_scales[name]
+                loss = loss + weighted[name]
     return loss, delta_reg, details, values, weighted
 
 
@@ -150,6 +208,24 @@ def flow_loss(model, prep, x_root, x_local, args):
     return 0.5 * (mse(v_root, x_root - noise_root) + mse(v_local, x_local - noise_local))
 
 
+def recipe_flow_loss(model, prep, x_root, x_local, obs_xyz, target_xyz, args, loss_args, scales):
+    """高 t 去噪估计的 FD2 配方损失，t ~ U(t_min, 1)。
+
+    Heun 采样的最终输出就是末步（t=1−1/步数）的 x̂；v-loss 只在系数空间约束它，骨架、脚接触、腿步态与频带幅度
+    等配方项原本只作用在 t=0 的端点上，与真正交付的采样输出不对齐。
+    """
+    batch_size = int(x_root.shape[0])
+    t_min = float(args.flow_recipe_t_min)
+    t = t_min + (1.0 - t_min) * torch.rand(batch_size, device=x_root.device)
+    t_root = t.view(batch_size, 1, 1, 1)
+    t_local = t.view(batch_size, 1, 1, 1, 1)
+    z_root = t_root * x_root + (1.0 - t_root) * torch.randn_like(x_root)
+    z_local = t_local * x_local + (1.0 - t_local) * torch.randn_like(x_local)
+    sc = _maybe_self_cond(model, prep, z_root, z_local, t, args)
+    root, local = model.denoise(prep, z_root, z_local, t, sc=sc)
+    return recipe_loss(model, prep, root, local, obs_xyz, target_xyz, args, loss_args, scales)[0]
+
+
 def run(args):
     check_args(args)
     fixseed(args.seed)
@@ -168,6 +244,8 @@ def run(args):
     model = NTU2PJiTFlow(**dict(kwargs, root_scale=root_scale, local_scale=local_scale)).to(device)
     loss_scales = _estimate_scales(args, cache) if args.loss_scale_normalize else None
     args.loss_scales = loss_scales
+    if interaction_weights(args):
+        args.interaction_scales = estimate_interaction_scales(args, cache)
     loss_args = _base_loss_args(args)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     args.num_params = count_parameters(model)
@@ -191,6 +269,11 @@ def run(args):
         loss_ep, delta_reg, _, extra_values, extra_weighted = endpoint_loss(model, prep, obs_xyz, target_xyz, args, loss_args, loss_scales)
         loss_v = flow_loss(model, prep, x_root, x_local, args)
         loss = loss_ep + float(args.flow_loss_weight) * loss_v
+        loss_r = None
+        # 权重为 0 时整支跳过：不多消耗随机数，旧配置的训练轨迹不变。
+        if args.flow_recipe_weight > 0:
+            loss_r = recipe_flow_loss(model, prep, x_root, x_local, obs_xyz, target_xyz, args, loss_args, loss_scales)
+            loss = loss + float(args.flow_recipe_weight) * loss_r
         if not torch.isfinite(loss):
             raise ValueError("训练 loss 非有限")
         optimizer.zero_grad()
@@ -212,6 +295,8 @@ def run(args):
                 ("created_at", _utc_now()),
             ]
         )
+        if loss_r is not None:
+            record["flow_recipe_loss"] = float(loss_r.detach().cpu().item())
         for name, value in extra_values.items():
             record[name] = float(value.detach().cpu().item())
             record[name + "_share"] = float((extra_weighted[name] / loss).detach().cpu().item())
@@ -245,6 +330,10 @@ def build_arg_parser():
     parser.add_argument("--sc_prob", type=float, default=0.5, help="自条件训练时使用上一轮估计的概率")
     parser.add_argument("--t_uniform_mix", type=float, default=0.0, help="按此比例改从 U(0,1) 抽 t（0 为 JiT 原分布）")
     parser.add_argument("--flow_kwargs", default="{}", help="传给 NTU2PJiTFlow 的额外结构参数（JSON）")
+    parser.add_argument("--flow_recipe_weight", type=float, default=0.0, help="高 t 去噪估计上 FD2 配方损失的权重（0 关闭）")
+    parser.add_argument("--flow_recipe_t_min", type=float, default=0.5, help="高 t 配方分支的 t ~ U(t_min, 1)")
+    parser.add_argument("--contact_curve_weight", type=float, default=0.0, help="双向手—对方躯干距离曲线损失（copy-last 归一化）")
+    parser.add_argument("--proximity_curve_weight", type=float, default=0.0, help="两人身体最近距离曲线损失（copy-last 归一化）")
     return parser
 
 

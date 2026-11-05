@@ -25,6 +25,7 @@ from model.forecasting_ntu2p_v2 import forward_details, independent_base_forward
 from train.train_ntu2p_v2 import PIPELINE, _device
 from utils.fixseed import fixseed
 from utils.ntu2p_canonical import to_canonical
+from utils.ntu2p_foot_planner import DEFAULT_PARAMS as FOOT_PLANNER_PARAMS, plan_feet
 from utils.ntu2p_naturalness import GAIT_BINS, aggregate_stats, compute_naturalness_stats, estimate_scene_frame
 from utils.ntu_smplx_2p_xyz import (
     articulation_ratios,
@@ -249,6 +250,7 @@ def evaluate(args):
         model.num_samples = int(args.flow_samples)
         model.nfe_steps = int(args.flow_nfe)
         model.solver = args.flow_solver
+        model.temperature = float(args.flow_temperature)
         model.reset_sampler(args.flow_sample_seed)
     needs_retrieval = int(getattr(model, "retrieval_k", 0)) > 0
     bank, bank_path = _load_bank(args, checkpoint_state, device, needs_retrieval or args.posthoc_root_blend > 0)
@@ -281,6 +283,9 @@ def evaluate(args):
                     blend_module, bank, obs_xyz, details["pred"], action, performer, args.posthoc_k, blend_ramp
                 )
             pred_xyz = details["pred"]
+            if args.foot_planner:
+                # 只改双腿的膝/踝/脚掌，放在全部指标之前，使 L2、自然度与交互指标都按规划后的输出计算。
+                pred_xyz = plan_feet(pred_xyz, obs_xyz)[0]
             base_xyz = independent_base_forward(base_model, obs_xyz, action)
             copy_xyz = copy_last_xyz(obs_xyz, args.pred_len)
             check_ntu_xyz("pred_xyz", pred_xyz, seq_len=args.pred_len, num_persons=2)
@@ -366,8 +371,10 @@ def evaluate(args):
     if is_flow:
         result["flow_readout"] = OrderedDict(
             [("readout", args.flow_readout), ("num_samples", int(args.flow_samples)), ("nfe_steps", int(args.flow_nfe)),
-             ("solver", args.flow_solver), ("sample_seed", int(args.flow_sample_seed))]
+             ("solver", args.flow_solver), ("sample_seed", int(args.flow_sample_seed)), ("temperature", float(args.flow_temperature))]
         )
+    if args.foot_planner:
+        result["foot_planner"] = OrderedDict(FOOT_PLANNER_PARAMS)
     if args.export_arrays:
         # 与 eval/analyze_ntu2p_naturalness.py --pred_file、sample/render_ntu2p_review_sheet.py --arrays 的格式兼容。
         methods = OrderedDict((key, data[key]) for key in ("model", "base") + EXTRA_VARIANTS if key in data)
@@ -421,6 +428,8 @@ def build_arg_parser():
     parser.add_argument("--flow_nfe", type=int, default=20, help="Heun 步数（NFE = 2×步数 − 1）")
     parser.add_argument("--flow_solver", choices=("heun", "euler"), default="heun")
     parser.add_argument("--flow_sample_seed", type=int, default=2718)
+    parser.add_argument("--flow_temperature", type=float, default=1.0, help="初始噪声倍数；0 为从噪声中心出发的确定性 ODE 采样")
+    parser.add_argument("--foot_planner", action="store_true", help="在模型输出后施加落脚规划层（utils/ntu2p_foot_planner.py）")
     parser.add_argument("--allow_cpu_for_smoke_test", action="store_true", help="仅冒烟测试：允许 --device cpu")
     return parser
 
