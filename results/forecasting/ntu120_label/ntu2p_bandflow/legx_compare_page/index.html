@@ -1,0 +1,253 @@
+<title>跨人腿部 Transformer 对照</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* 版式：单栏实验报告；判定 → 变化幅度图（相对原始模型 BR 的 %）→ 原始分数表 → 判定明细 → 抽帧。
+     颜色：青绿 = 原始模型 BR（主线），紫 = 当前 XL；绿/红只表示"变好/变差"，与模型色分开。 */
+  :root {
+    --bg: #F5F7FA;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --br: #0E7C74;
+    --br-tint: #E2F3F1;
+    --xl: #6B4FBB;
+    --xl-tint: #EEEAF8;
+    --fd2: #8A94A3;
+    --good: #1F7A3A;
+    --bad: #B4381F;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --br: #3CC7B8; --br-tint: #12302E; --xl: #A893F0; --xl-tint: #251F3D; --fd2: #7C8796; --good: #5CC27A; --bad: #F08A6E; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --br: #3CC7B8; --br-tint: #12302E; --xl: #A893F0; --xl-tint: #251F3D; --fd2: #7C8796; --good: #5CC27A; --bad: #F08A6E; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.75; }
+  .page {
+    max-width: 1000px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 52px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); }
+  h2 { font-size: var(--step-2); }
+  p { margin: 0; max-width: 70ch; }
+  section { display: grid; gap: 16px; min-width: 0; }
+  code { font-family: var(--font-mono); font-size: 0.86em; }
+  a { color: var(--br); }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .lede { color: var(--muted); }
+  .note { font-size: var(--step--1); color: var(--muted); max-width: 82ch; }
+  .verdict { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+  .pill { display: inline-block; border-radius: 999px; padding: 3px 14px; font-weight: 700; font-size: var(--step-0); border: 1px solid var(--bad); color: var(--bad); }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .tile { background: var(--panel); padding: 12px 14px; display: grid; gap: 2px; }
+  .tile .k { font-size: var(--step--1); color: var(--muted); }
+  .tile .v { font-size: var(--step-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .d { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+  @media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+  .box { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 16px; display: grid; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; }
+  svg.chart { display: block; width: 100%; min-width: 600px; height: auto; font-family: var(--font-body); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--step--1); color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); }
+  th.br { color: var(--br); } th.xl { color: var(--xl); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.grp td { background: var(--bg); color: var(--muted); font-weight: 500; text-align: left; }
+  td.dir { color: var(--muted); text-align: left; }
+  .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 720px) { .checks { grid-template-columns: minmax(0, 1fr); } }
+  .checks ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--step--1); }
+  .checks li { display: flex; gap: 8px; align-items: baseline; }
+  .mark { font-weight: 700; min-width: 2.2em; }
+  figure { margin: 0; display: grid; gap: 8px; }
+  figure img { width: 100%; max-width: 760px; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #FFFFFF; }
+  figcaption { font-size: var(--step--1); color: var(--muted); max-width: 80ch; }
+  .figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 860px) { .figs { grid-template-columns: minmax(0, 1fr); } }
+  ul.notes { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 82ch; }
+  footer { font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+</style>
+
+<main class="page">
+  <header style="display:grid; gap:12px">
+    <div class="eyebrow">NTU2P 扩散主线 · 受试者留出验证集 · seed0 · 10000 步 · 读出 ode0 + 落脚规划</div>
+    <h1>跨人腿部 Transformer 对照</h1>
+    <p class="lede">原始模型是现在的主线 BR。当前模型 XL 只在 BR 的腿流后面多加了一个小 Transformer：两人 × 两条腿 × 12 个 5 帧块共 48 个 token，在同一个场景坐标里互相注意，输出对腿部轨迹的修正。其余设置、训练步数、随机种子都和 BR 相同。原始 DCT 模型 FD2 作为第三列参照。</p>
+    <div class="verdict"><span class="pill">判定：无增量，多数指标变差</span><span class="note">预登记的精度、交互、腿三条增量都未达到，精度护栏未过。主线保持 BR。</span></div>
+  </header>
+
+  <section aria-labelledby="h-key">
+    <h2 id="h-key">最关键的四个数</h2>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section aria-labelledby="h-delta">
+    <h2 id="h-delta">相对原始模型 BR 的变化</h2>
+    <div class="box scroll">
+      <svg class="chart" id="c-delta" viewBox="0 0 900 480" role="img" aria-label="当前模型 XL 与原始 DCT 模型 FD2 各指标相对 BR 的百分比变化，绿色为变好，红色为变差"></svg>
+      <div class="legend"><span><i style="background:var(--xl)"></i>当前 XL 相对 BR</span><span><i style="background:var(--fd2)"></i>原始 DCT 模型 FD2 相对 BR</span><span>条右侧数字：<b class="good">绿</b> = 变好，<b class="bad">红</b> = 变差（已按每个指标"越低越好 / 越高越好"判断）</span></div>
+    </div>
+    <p class="note">所有指标都换算成"相对 BR 的百分比变化"放在同一张图上，0 线就是原始模型。单 seed 的随机波动约 0.8%，精度类指标小于这个幅度的变化不能当真。</p>
+  </section>
+
+  <section aria-labelledby="h-table">
+    <h2 id="h-table">原始分数</h2>
+    <div class="table">
+      <table id="t-raw">
+        <thead><tr><th>指标</th><th>方向</th><th>原始 DCT 模型 FD2</th><th class="br">原始模型 BR（主线）</th><th class="xl">当前 XL</th><th>XL 相对 BR</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note" id="ode0-note"></p>
+  </section>
+
+  <section aria-labelledby="h-checks">
+    <h2 id="h-checks">预登记判定</h2>
+    <div class="checks">
+      <div class="box"><h3 style="font-size:var(--step-0)">增量（任一满足即可）</h3><ul id="gains"></ul></div>
+      <div class="box"><h3 style="font-size:var(--step-0)">护栏（必须全过）</h3><ul id="guards"></ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-frames">
+    <h2 id="h-frames">抽帧看</h2>
+    <div class="figs">
+      <figure>
+        <img src="strip_028.png" alt="#028 推人：GT、BR、XL 第 20 到 60 帧" loading="lazy">
+        <figcaption><b>#028 推人</b>（GT | BR | XL）。这一例 XL 的误差反而更低（0.176 vs 0.199），B 后退的位置更接近真实；但第 52–60 帧 B 的后腿被拉成大弓步，站姿比 BR 更宽。</figcaption>
+      </figure>
+      <figure>
+        <img src="strip_194.png" alt="#194 跟随：GT、BR、XL 第 20 到 60 帧" loading="lazy">
+        <figcaption><b>#194 跟随</b>（GT | BR | XL）。XL 更差（0.398 vs 0.332）：A 照样走进 B，B 从 1.7 秒起反向朝 A 移动，结尾两人交叉穿过；BR 只是重叠。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-why">
+    <h2 id="h-why">怎么理解</h2>
+    <ul class="notes">
+      <li>"B 往后退"主要由主干给出的骨盆轨迹决定，主干本来就有跨人注意力。两人的腿之间缺一条直连，不是现在的瓶颈。</li>
+      <li>新模块直接改腿的局部位置，和腿流、落脚规划的分工互相干扰，左右脚交替相关从 0.68 降到 0.60。训练只有 1709 条序列，两人腿部的协同模式少而杂，模块更可能学到偶然相关。这一条是推测，没有单独验证。</li>
+      <li>和之前的接触图（J4）、10-14 的双腿流变体、11-04 的关节级交互图 G1/G2 一致：在当前数据和确定性读出下，再加跨人关系结构都没有带来增量。</li>
+      <li>单个 seed，但精度 +1.95%、接触前超额后退 +53% 都远超约 0.8% 的随机波动。按预登记不补 seed、不调参。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>数据：<code>results/forecasting/ntu120_label/ntu2p_jitflow/subjval/legx_s0/summary.json</code>；FD2 参照 <code>…/bandflow_s0/FD2ref_plan.json</code>（同样加落脚规划）。代码 <code>model/forecasting_ntu2p_jitflow.py</code> 的 <code>LegCrossTransformer</code>（开关 <code>leg_xattn</code>，默认关闭）、驱动 <code>scripts/run_ntu2p_legx.py</code>。</span>
+    <span>设计与预登记 <code>docs/ai/context/20261105-221250-…-design-and-preregistration.md</code>，结果 <code>20261105-225809-…-result.md</code>。</span>
+  </footer>
+</main>
+
+<script type="application/json" id="data">{"FD2": {"mpjpe": 0.17263440691266466, "xyz_mse": 0.019454956280919703, "xyz_mae": 0.0843342242211948, "primary_excess_antic": 0.02765609135259203, "missed_contact_total": 53, "contact_rmse_push": 0.20269047245564079, "contact_rmse_all": 0.18716176550693522, "wrong_overlap": null, "slide_frame_ratio": 0.028106150550084124, "step_count": 1.6643835616438356, "jerk_body": 25.401104554458787, "foot_penetration_ratio": 0.024736842105263158, "dct_mid_ratio": 0.6654140824656029, "gait_sep_corr_f01_10": 0.5933707984260601}, "BR": {"mpjpe": 0.1695901832961843, "xyz_mse": 0.020279228709909596, "xyz_mae": 0.08221534410348305, "primary_excess_antic": 0.033029980545505065, "missed_contact_total": 43, "contact_rmse_push": 0.20695012098748178, "contact_rmse_all": 0.19179383788048257, "wrong_overlap": 0.005910931174089069, "slide_frame_ratio": 0.029975200691313323, "step_count": 1.6575342465753424, "jerk_body": 21.16196872457572, "foot_penetration_ratio": 0.026639676113360326, "bone_rel_err_body": 9.703328185379609e-08, "dct_mid_ratio": 0.2679771598256408, "gait_sep_corr_f01_10": 0.6807231820030926, "dct_low_ratio": 0.6381997815857681}, "XL": {"mpjpe": 0.17288870681152652, "xyz_mse": 0.021599155650870037, "xyz_mae": 0.08375078367318219, "primary_excess_antic": 0.05039332533954798, "missed_contact_total": 51, "contact_rmse_push": 0.2220825205366008, "contact_rmse_all": 0.2017746123328457, "wrong_overlap": 0.006396761133603239, "slide_frame_ratio": 0.03529011865510386, "step_count": 1.63013698630137, "jerk_body": 19.201521285353515, "foot_penetration_ratio": 0.024615384615384615, "bone_rel_err_body": 9.660883085413489e-08, "dct_mid_ratio": 0.3015768728583702, "gait_sep_corr_f01_10": 0.5980256407243197, "dct_low_ratio": 0.6687316347466518}, "ode0_mpjpe": {"BR": 0.1691089686353197, "XL": 0.17232971798311844}, "gains": {"精度：mpjpe ≤ 0.992×BR 且 xyz_mse ≤ BR": false, "交互：超额后退 ≤ 0.9×BR 且漏接触 ≤ BR": false, "腿：滑行 ≤ BR−0.005、步数 ≥ BR、交替相关 ≥ BR": false}, "guards": {"mpjpe ≤ 1.01×BR": false, "jerk ≤ 24.5": true, "骨长 ≤ 1e-5": true, "穿地 ≤ BR+0.01": true, "摆动 gate": true}}</script>
+<script>
+(function () {
+  "use strict";
+  const D = JSON.parse(document.getElementById("data").textContent);
+  // [键, 名称, 越低越好?, 小数位, 分组]
+  const M = [
+    ["mpjpe", "mpjpe（平均关节误差，m）", true, 4, "精度"],
+    ["xyz_mse", "xyz_mse", true, 5, "精度"],
+    ["xyz_mae", "xyz_mae", true, 5, "精度"],
+    ["primary_excess_antic", "接触前超额后退（m）", true, 4, "交互"],
+    ["missed_contact_total", "漏接触（次）", true, 0, "交互"],
+    ["contact_rmse_push", "推人接触距离误差", true, 4, "交互"],
+    ["contact_rmse_all", "全部动作接触距离误差", true, 4, "交互"],
+    ["wrong_overlap", "错误重叠帧比", true, 4, "交互"],
+    ["slide_frame_ratio", "滑行帧比", true, 3, "腿与步态"],
+    ["step_count", "步数（GT 约 2.3）", false, 2, "腿与步态"],
+    ["gait_sep_corr_f01_10", "左右脚交替相关", false, 3, "腿与步态"],
+    ["foot_penetration_ratio", "穿地比例", true, 4, "腿与步态"],
+    ["jerk_body", "jerk（抖动）", true, 1, "平滑与摆动"],
+    ["dct_mid_ratio", "1.2–2 Hz 摆动（相对 GT）", false, 3, "平滑与摆动"],
+  ];
+  const pct = (a, b) => 100 * (b / a - 1);
+  const better = (lower, d) => (lower ? d < 0 : d > 0);
+  const fmt = (v, d) => (v == null ? "—" : v.toFixed(d));
+  const sgn = (p) => (p > 0 ? "+" : "") + p.toFixed(Math.abs(p) < 10 ? 2 : 0) + "%";
+
+  // 关键数字
+  const tiles = [["mpjpe", "精度 mpjpe"], ["primary_excess_antic", "手没碰到就躲"], ["missed_contact_total", "漏接触"], ["gait_sep_corr_f01_10", "左右脚交替"]];
+  const T = document.getElementById("tiles");
+  for (const [k, name] of tiles) {
+    const m = M.find((x) => x[0] === k), a = D.BR[k], b = D.XL[k], p = pct(a, b), ok = better(m[2], p);
+    const div = document.createElement("div"); div.className = "tile";
+    div.innerHTML = '<span class="k">' + name + '</span><span class="v ' + (ok ? "good" : "bad") + '">' + sgn(p) + '</span><span class="d">BR ' + fmt(a, m[3]) + " → XL " + fmt(b, m[3]) + "</span>";
+    T.appendChild(div);
+  }
+
+  // 变化幅度图
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+  const svg = document.getElementById("c-delta");
+  const W = 900, L = 230, R = 70, T0 = 26, rowH = 31, lo = -60, hi = 60;
+  const x = (p) => L + (W - L - R) * (Math.max(lo, Math.min(hi, p)) - lo) / (hi - lo);
+  for (const v of [-60, -40, -20, 0, 20, 40, 60]) {
+    svg.appendChild(el("line", { x1: x(v), x2: x(v), y1: T0 - 6, y2: T0 + rowH * M.length, style: "stroke: " + (v === 0 ? "var(--fg)" : "var(--line)") + "; stroke-width: " + (v === 0 ? 1.4 : 1) }));
+    svg.appendChild(el("text", { x: x(v), y: 14, "text-anchor": "middle", style: "fill: var(--muted); font-size: 11px" }, (v > 0 ? "+" : "") + v + "%"));
+  }
+  M.forEach((m, i) => {
+    const yc = T0 + rowH * i + rowH / 2;
+    svg.appendChild(el("text", { x: L - 10, y: yc + 4, "text-anchor": "end", style: "fill: var(--fg); font-size: 12px" }, m[1]));
+    const px = pct(D.BR[m[0]], D.XL[m[0]]);
+    const bx = x(0), ex = x(px);
+    svg.appendChild(el("rect", { x: Math.min(bx, ex), y: yc - 6, width: Math.max(1.5, Math.abs(ex - bx)), height: 12, rx: 2, style: "fill: var(--xl)" }));
+    if (D.FD2[m[0]] != null) {
+      const pf = pct(D.BR[m[0]], D.FD2[m[0]]);
+      svg.appendChild(el("circle", { cx: x(pf), cy: yc, r: 4.5, style: "fill: var(--panel); stroke: var(--fd2); stroke-width: 2" }));
+    }
+    const ok = better(m[2], px);
+    svg.appendChild(el("text", { x: W - R + 8, y: yc + 4, style: "fill: " + (ok ? "var(--good)" : "var(--bad)") + "; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums" }, sgn(px)));
+    if (Math.abs(px) > hi) svg.appendChild(el("text", { x: x(hi) - 4, y: yc - 9, "text-anchor": "end", style: "fill: var(--muted); font-size: 10px" }, "超出刻度"));
+  });
+
+  // 原始分数表
+  const tb = document.querySelector("#t-raw tbody");
+  let group = "";
+  for (const m of M) {
+    if (m[4] !== group) { group = m[4]; const g = document.createElement("tr"); g.className = "grp"; g.innerHTML = '<td colspan="6">' + group + "</td>"; tb.appendChild(g); }
+    const a = D.BR[m[0]], b = D.XL[m[0]], p = pct(a, b);
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + m[1] + '</td><td class="dir">' + (m[2] ? "越低越好" : "越高越好") + "</td><td>" + fmt(D.FD2[m[0]], m[3]) + "</td><td>" + fmt(a, m[3]) + "</td><td>" + fmt(b, m[3]) +
+      '</td><td class="' + (better(m[2], p) ? "good" : "bad") + '">' + sgn(p) + "</td>";
+    tb.appendChild(tr);
+  }
+  document.getElementById("ode0-note").textContent = "不加落脚规划时（ode0）：mpjpe BR " + D.ode0_mpjpe.BR.toFixed(5) + "，XL " + D.ode0_mpjpe.XL.toFixed(5) + "（" + sgn(pct(D.ode0_mpjpe.BR, D.ode0_mpjpe.XL)) + "）。FD2 一列同样加了落脚规划；它的错误重叠帧比没有导出数组，记为 —。";
+
+  // 判定
+  const list = (id, obj, yes, no) => {
+    const ul = document.getElementById(id);
+    for (const k in obj) {
+      const li = document.createElement("li");
+      li.innerHTML = '<span class="mark ' + (obj[k] ? "good" : "bad") + '">' + (obj[k] ? yes : no) + "</span><span>" + k + "</span>";
+      ul.appendChild(li);
+    }
+  };
+  list("gains", D.gains, "是", "否");
+  list("guards", D.guards, "过", "未过");
+})();
+</script>

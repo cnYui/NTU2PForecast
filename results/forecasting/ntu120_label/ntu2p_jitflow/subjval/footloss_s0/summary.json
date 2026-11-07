@@ -1,0 +1,104 @@
+{
+  "rows": {
+    "BR": {
+      "mpjpe": 0.1691089686353197,
+      "xyz_mse": 0.02015073905861088,
+      "xyz_mae": 0.08203622192023736,
+      "primary_excess_antic": 0.033029980545505065,
+      "missed_contact_total": 43,
+      "contact_rmse_push": 0.20695012098748178,
+      "contact_rmse_all": 0.19179383788048257,
+      "wrong_overlap": 0.004939271255060729,
+      "slide_frame_ratio": 0.198842345672602,
+      "step_count": 1.3904109589041096,
+      "jerk_body": 15.373347408535,
+      "foot_penetration_ratio": 0.0680161943319838,
+      "bone_rel_err_body": 1.059678918384041e-07,
+      "dct_mid_ratio": 0.23210420299426626,
+      "gait_sep_corr_f01_10": 0.4601042112187775,
+      "dct_low_ratio": 0.626536431518481
+    },
+    "FS": {
+      "mpjpe": 0.17154409075796845,
+      "xyz_mse": 0.02104549345217253,
+      "xyz_mae": 0.08304992945570695,
+      "primary_excess_antic": 0.032130789844352504,
+      "missed_contact_total": 48,
+      "contact_rmse_push": 0.22235848816869272,
+      "contact_rmse_all": 0.1945846766114896,
+      "wrong_overlap": 0.0036437246963562753,
+      "slide_frame_ratio": 0.05626793646816148,
+      "step_count": 1.2123287671232876,
+      "jerk_body": 14.898130040093365,
+      "foot_penetration_ratio": 0.05477732793522267,
+      "bone_rel_err_body": 1.0573976093984708e-07,
+      "dct_mid_ratio": 0.22501277481349952,
+      "gait_sep_corr_f01_10": 0.46637868512656816,
+      "dct_low_ratio": 0.6614602758508769
+    },
+    "FC": {
+      "mpjpe": 0.17113002712427364,
+      "xyz_mse": 0.02084882151682367,
+      "xyz_mae": 0.08294512364666472,
+      "primary_excess_antic": 0.03386711192359809,
+      "missed_contact_total": 45,
+      "contact_rmse_push": 0.22761910577975608,
+      "contact_rmse_all": 0.19371521478578133,
+      "wrong_overlap": 0.00437246963562753,
+      "slide_frame_ratio": 0.06701791285135608,
+      "step_count": 0.8835616438356164,
+      "jerk_body": 14.45470869367599,
+      "foot_penetration_ratio": 0.05753036437246964,
+      "bone_rel_err_body": 1.0585292722387109e-07,
+      "dct_mid_ratio": 0.225084235324583,
+      "gait_sep_corr_f01_10": 0.46495549031635053,
+      "dct_low_ratio": 0.6366716193519972
+    },
+    "BR+规划": {
+      "mpjpe": 0.1695901832961843,
+      "xyz_mse": 0.020279228709909596,
+      "xyz_mae": 0.08221534410348305,
+      "primary_excess_antic": 0.033029980545505065,
+      "missed_contact_total": 43,
+      "contact_rmse_push": 0.20695012098748178,
+      "contact_rmse_all": 0.19179383788048257,
+      "wrong_overlap": 0.005910931174089069,
+      "slide_frame_ratio": 0.029975200691313323,
+      "step_count": 1.6575342465753424,
+      "jerk_body": 21.16196872457572,
+      "foot_penetration_ratio": 0.026639676113360326,
+      "bone_rel_err_body": 9.703328185379609e-08,
+      "dct_mid_ratio": 0.2679771598256408,
+      "gait_sep_corr_f01_10": 0.6807231820030926,
+      "dct_low_ratio": 0.6381997815857681
+    }
+  },
+  "decisions": {
+    "FS": {
+      "guards": {
+        "mpjpe ≤ 1.01×BR": false,
+        "xyz_mse ≤ 1.02×BR": false,
+        "jerk ≤ 24.5": true,
+        "穿地 ≤ BR+0.01": true,
+        "骨长 ≤ 1e-5": true,
+        "摆动 gate": true,
+        "超额后退 ≤ 1.1×BR": true,
+        "漏接触 ≤ 1.1×BR": false
+      },
+      "level": "无效（护栏未过）"
+    },
+    "FC": {
+      "guards": {
+        "mpjpe ≤ 1.01×BR": false,
+        "xyz_mse ≤ 1.02×BR": false,
+        "jerk ≤ 24.5": true,
+        "穿地 ≤ BR+0.01": true,
+        "骨长 ≤ 1e-5": true,
+        "摆动 gate": true,
+        "超额后退 ≤ 1.1×BR": true,
+        "漏接触 ≤ 1.1×BR": true
+      },
+      "level": "无效（护栏未过）"
+    }
+  }
+}

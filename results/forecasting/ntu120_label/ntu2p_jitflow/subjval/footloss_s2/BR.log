@@ -1,0 +1,26 @@
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_v2.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_subjval_BR_s2_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/subjval/footloss_s2/BR_ode0.json --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --split val --interaction_metrics --flow_readout sample --flow_temperature 0.0 --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0 --export_arrays results/forecasting/ntu120_label/ntu2p_jitflow/subjval/footloss_s2/BR_ode0_arrays.pt
+Traceback (most recent call last):
+  File "eval/eval_ntu2p_v2.py", line 439, in <module>
+    evaluate(build_arg_parser().parse_args())
+  File "eval/eval_ntu2p_v2.py", line 264, in evaluate
+    base_model, _ = load_base_model_from_checkpoint(args.baseline_checkpoint, device)
+  File "/home/rpartx3080/CodeSpace/NTU2PForecast/model/forecasting_ntu2p_residual_xyz.py", line 340, in load_base_model_from_checkpoint
+    base_model.to(device)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 612, in to
+    return self._apply(convert)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 359, in _apply
+    module._apply(fn)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 359, in _apply
+    module._apply(fn)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 359, in _apply
+    module._apply(fn)
+  [Previous line repeated 1 more time]
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 381, in _apply
+    param_applied = fn(param)
+  File "/home/rpartx3080/.local/micromamba/envs/regennet/lib/python3.7/site-packages/torch/nn/modules/module.py", line 610, in convert
+    return t.to(device, dtype if t.is_floating_point() else None, non_blocking)
+RuntimeError: CUDA out of memory. Tried to allocate 2.00 MiB (GPU 0; 9.76 GiB total capacity; 107.94 MiB already allocated; 9.38 MiB free; 110.00 MiB reserved in total by PyTorch)
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_v2.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_subjval_BR_s2_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/subjval/footloss_s2/BR_ode0.json --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_subjval_s0_5000/model000005000.pt --split val --interaction_metrics --flow_readout sample --flow_temperature 0.0 --manifest_path results/forecasting/ntu120_label/ntu2p_subjval/manifest_subjval_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache_subjval --device cuda:0 --export_arrays results/forecasting/ntu120_label/ntu2p_jitflow/subjval/footloss_s2/BR_ode0_arrays.pt
+{"model": {"xyz_mse": 0.01962857815599152, "xyz_mae": 0.08140866916913253, "mpjpe": 0.16737880856402007}, "gate": true}

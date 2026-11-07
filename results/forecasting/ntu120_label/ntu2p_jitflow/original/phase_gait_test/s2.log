@@ -1,0 +1,53 @@
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python train/train_ntu2p_phase_gait.py --save_dir save/forecasting/ntu120_label/ntu2p_phase_gait_v4b_original_s2 --seed 2 --device cuda:0 --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache --manifest_path results/forecasting/ntu120_label/ntu2p_diffusion_o10_p50_phase0_gates/manifest_seed0.json --ground_aware --penetration_weight 10 --obs_recon_weight 1.0 --f_steps 12000 --obs_pose_input --anchor_tau 4 --vel_lowpass_order 8 --leg_l2_weight 3.0
+{"stage": "pae", "step": 1, "recon_mse": 0.9264618158340454}
+{"stage": "pae", "step": 500, "recon_mse": 0.14504842460155487}
+{"stage": "pae", "step": 1000, "recon_mse": 0.13449743390083313}
+{"stage": "pae", "step": 1500, "recon_mse": 0.17836105823516846}
+{"stage": "pae", "step": 2000, "recon_mse": 0.21506524085998535}
+{"stage": "pae", "step": 2500, "recon_mse": 0.17318281531333923}
+{"stage": "pae", "step": 3000, "recon_mse": 0.1497740000486374}
+{"stage": "pae", "step": 3500, "recon_mse": 0.14051879942417145}
+{"stage": "pae", "step": 4000, "recon_mse": 0.10226460546255112}
+{"stage": "phase_stats", "f": 0.734473705291748, "a": 1.2837023735046387, "b": -0.25515034794807434, "psi": 0.011184676550328732, "scale_f": 0.20652803778648376, "scale_a": 1.5699090957641602, "scale_b": 1.9490994215011597}
+{"stage": "G", "step": 1, "leg_dist": 0.19729900360107422, "skate": 0.09618663787841797, "bce": 0.7040963768959045, "penetration": 0.007579195313155651}
+{"stage": "G", "step": 500, "leg_dist": 0.04274209961295128, "skate": 0.010299711488187313, "bce": 0.36031028628349304, "penetration": 0.00012204637459944934}
+{"stage": "G", "step": 1000, "leg_dist": 0.03849886357784271, "skate": 0.008349394425749779, "bce": 0.31898969411849976, "penetration": 5.907519152970053e-05}
+{"stage": "G", "step": 1500, "leg_dist": 0.0354313924908638, "skate": 0.0083098029717803, "bce": 0.3487912714481354, "penetration": 4.473972148844041e-05}
+{"stage": "G", "step": 2000, "leg_dist": 0.04075024649500847, "skate": 0.008434437215328217, "bce": 0.3126167356967926, "penetration": 0.0006429892382584512}
+{"stage": "G", "step": 2500, "leg_dist": 0.03207304701209068, "skate": 0.006905228365212679, "bce": 0.29766735434532166, "penetration": 2.9876082408009097e-05}
+{"stage": "G", "step": 3000, "leg_dist": 0.03338296711444855, "skate": 0.007895219139754772, "bce": 0.3236176371574402, "penetration": 2.7903675800189376e-05}
+{"stage": "G", "step": 3500, "leg_dist": 0.03860046714544296, "skate": 0.007657407317310572, "bce": 0.2730877995491028, "penetration": 0.0001261881407117471}
+{"stage": "G", "step": 4000, "leg_dist": 0.031339745968580246, "skate": 0.006952795200049877, "bce": 0.2512117922306061, "penetration": 4.64922450191807e-05}
+{"stage": "G", "step": 4500, "leg_dist": 0.03451251611113548, "skate": 0.006973433308303356, "bce": 0.25563350319862366, "penetration": 9.787656017579138e-05}
+{"stage": "G", "step": 5000, "leg_dist": 0.032067012041807175, "skate": 0.006739730015397072, "bce": 0.24733249843120575, "penetration": 4.470405838219449e-05}
+{"stage": "G", "step": 5500, "leg_dist": 0.033692870289087296, "skate": 0.007179620210081339, "bce": 0.25060492753982544, "penetration": 0.00010427986126160249}
+{"stage": "G", "step": 6000, "leg_dist": 0.03223239257931709, "skate": 0.006018133834004402, "bce": 0.22320739924907684, "penetration": 9.219821367878467e-05}
+{"stage": "F", "step": 1, "phase": 1.9457566738128662, "mags": 10.81369400024414, "self_skate": 0.06112542375922203, "obs_recon": 0.03467359393835068, "leg_l2": 0.11642921715974808}
+{"stage": "F", "step": 500, "phase": 0.96429443359375, "mags": 1.3805747032165527, "self_skate": 0.021347329020500183, "obs_recon": 0.025285236537456512, "leg_l2": 0.08009591698646545}
+{"stage": "F", "step": 1000, "phase": 0.9025822877883911, "mags": 1.2241851091384888, "self_skate": 0.020291248336434364, "obs_recon": 0.022247448563575745, "leg_l2": 0.07591468095779419}
+{"stage": "F", "step": 1500, "phase": 0.9186774492263794, "mags": 1.3349559307098389, "self_skate": 0.018708210438489914, "obs_recon": 0.019796377047896385, "leg_l2": 0.07224154472351074}
+{"stage": "F", "step": 2000, "phase": 0.7977085113525391, "mags": 1.0318567752838135, "self_skate": 0.016904698684811592, "obs_recon": 0.02151648700237274, "leg_l2": 0.06983088701963425}
+{"stage": "F", "step": 2500, "phase": 0.7864853143692017, "mags": 1.015106439590454, "self_skate": 0.018483741208910942, "obs_recon": 0.021367739886045456, "leg_l2": 0.07147174328565598}
+{"stage": "F", "step": 3000, "phase": 0.7946555614471436, "mags": 1.0199310779571533, "self_skate": 0.019628027454018593, "obs_recon": 0.021146556362509727, "leg_l2": 0.06852549314498901}
+{"stage": "F", "step": 3500, "phase": 0.7117884755134583, "mags": 0.943365216255188, "self_skate": 0.01828022673726082, "obs_recon": 0.02078292705118656, "leg_l2": 0.06743469089269638}
+{"stage": "F", "step": 4000, "phase": 0.9022142291069031, "mags": 0.9680231809616089, "self_skate": 0.019257929176092148, "obs_recon": 0.019001279026269913, "leg_l2": 0.06077483668923378}
+{"stage": "F", "step": 4500, "phase": 0.7630032300949097, "mags": 0.9643049240112305, "self_skate": 0.019046755507588387, "obs_recon": 0.02221588045358658, "leg_l2": 0.06735683232545853}
+{"stage": "F", "step": 5000, "phase": 0.6268899440765381, "mags": 0.8950522541999817, "self_skate": 0.020444920286536217, "obs_recon": 0.022581076249480247, "leg_l2": 0.0645795613527298}
+{"stage": "F", "step": 5500, "phase": 0.6288354396820068, "mags": 0.8230251669883728, "self_skate": 0.018891699612140656, "obs_recon": 0.022902995347976685, "leg_l2": 0.06261281669139862}
+{"stage": "F", "step": 6000, "phase": 0.6613291501998901, "mags": 0.8344801664352417, "self_skate": 0.016592560335993767, "obs_recon": 0.021229101344943047, "leg_l2": 0.059525858610868454}
+{"stage": "F", "step": 6500, "phase": 0.6839522123336792, "mags": 0.9637365341186523, "self_skate": 0.016549384221434593, "obs_recon": 0.021615248173475266, "leg_l2": 0.060338061302900314}
+{"stage": "F", "step": 7000, "phase": 0.7697217464447021, "mags": 0.8840103149414062, "self_skate": 0.019005723297595978, "obs_recon": 0.019382024183869362, "leg_l2": 0.061124932020902634}
+{"stage": "F", "step": 7500, "phase": 0.6615134477615356, "mags": 0.7516264915466309, "self_skate": 0.01579686813056469, "obs_recon": 0.020782601088285446, "leg_l2": 0.05796187371015549}
+{"stage": "F", "step": 8000, "phase": 0.6709342002868652, "mags": 0.6513578295707703, "self_skate": 0.017109684646129608, "obs_recon": 0.01964382827281952, "leg_l2": 0.05502581596374512}
+{"stage": "F", "step": 8500, "phase": 0.6047118902206421, "mags": 0.7532792091369629, "self_skate": 0.018077204003930092, "obs_recon": 0.020878279581665993, "leg_l2": 0.05574170500040054}
+{"stage": "F", "step": 9000, "phase": 0.6828836798667908, "mags": 0.6911942362785339, "self_skate": 0.017955925315618515, "obs_recon": 0.02081383764743805, "leg_l2": 0.0630672425031662}
+{"stage": "F", "step": 9500, "phase": 0.6066620945930481, "mags": 0.7267759442329407, "self_skate": 0.016739511862397194, "obs_recon": 0.021413438022136688, "leg_l2": 0.05880137160420418}
+{"stage": "F", "step": 10000, "phase": 0.5719698071479797, "mags": 0.7005427479743958, "self_skate": 0.01795307733118534, "obs_recon": 0.019758349284529686, "leg_l2": 0.056785572320222855}
+{"stage": "F", "step": 10500, "phase": 0.5578408241271973, "mags": 0.6032087802886963, "self_skate": 0.014719640836119652, "obs_recon": 0.02072470635175705, "leg_l2": 0.05123157054185867}
+{"stage": "F", "step": 11000, "phase": 0.522534191608429, "mags": 0.6156361103057861, "self_skate": 0.024085406213998795, "obs_recon": 0.022016385570168495, "leg_l2": 0.05696040019392967}
+{"stage": "F", "step": 11500, "phase": 0.6333064436912537, "mags": 0.5776607990264893, "self_skate": 0.016039347276091576, "obs_recon": 0.022078432142734528, "leg_l2": 0.053812842816114426}
+{"stage": "F", "step": 12000, "phase": 0.5709332227706909, "mags": 0.6129848957061768, "self_skate": 0.01687679998576641, "obs_recon": 0.020946571603417397, "leg_l2": 0.056300342082977295}
+
+命令：/home/rpartx3080/.local/micromamba/envs/regennet/bin/python eval/eval_ntu2p_v2.py --checkpoint save/forecasting/ntu120_label/ntu2p_bandflow_original_BR_s2_10000/ema/model000010000.pt --output results/forecasting/ntu120_label/ntu2p_jitflow/original/phase_gait_test/PG_ode0_s2.json --baseline_checkpoint save/forecasting/ntu120_label/ntu2p_independent_single_person_o10_p50_cuda_retrain_s0_5000/model000005000.pt --split test --interaction_metrics --flow_readout sample --flow_temperature 0.0 --manifest_path results/forecasting/ntu120_label/ntu2p_diffusion_o10_p50_phase0_gates/manifest_seed0.json --cache_dir results/forecasting/ntu120_label/ntu2p_xyz_seq_cache --device cuda:0 --export_arrays results/forecasting/ntu120_label/ntu2p_jitflow/original/phase_gait_test/PG_ode0_s2_arrays.pt --gait_head save/forecasting/ntu120_label/ntu2p_phase_gait_v4b_original_s2/phase_gait.pt
+{"model": {"xyz_mse": 0.029316968229545038, "xyz_mae": 0.08708785300671532, "mpjpe": 0.1804436950900511}, "gate": true}

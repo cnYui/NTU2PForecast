@@ -1,0 +1,241 @@
+<title>DCT 截断前后对比</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* 版式：单栏结果报告；结论 → 抖动图 → 精度图 → 两组明细表 → 抽帧证据。
+     颜色：青绿 = 截断到 11 阶（主线的做法），砖红 = 保留更多高频（20 或 49 阶），灰 = 参照线。 */
+  :root {
+    --bg: #F5F7FA;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --keep: #0E7C74;
+    --keep-tint: #E2F3F1;
+    --hi: #B4381F;
+    --hi2: #E07A4F;
+    --hi-tint: #F8E6E1;
+    --good: #1F7A3A;
+    --bad: #B4381F;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --keep: #3CC7B8; --keep-tint: #12302E; --hi: #F08A6E; --hi2: #F5B48F; --hi-tint: #3A231D; --good: #5CC27A; --bad: #F08A6E; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --keep: #3CC7B8; --keep-tint: #12302E; --hi: #F08A6E; --hi2: #F5B48F; --hi-tint: #3A231D; --good: #5CC27A; --bad: #F08A6E; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.75; }
+  .page {
+    max-width: 1000px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 56px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); }
+  h2 { font-size: var(--step-2); }
+  h3 { font-size: var(--step-1); }
+  p { margin: 0; max-width: 70ch; }
+  section { display: grid; gap: 18px; min-width: 0; }
+  code { font-family: var(--font-mono); font-size: 0.86em; }
+  a { color: var(--keep); }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .lede { color: var(--muted); }
+  .note { font-size: var(--step--1); color: var(--muted); max-width: 80ch; }
+  .verdict { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .verdict > div { background: var(--panel); padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+  .verdict .k { font-size: var(--step--1); color: var(--muted); }
+  .verdict .v { font-size: var(--step-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .verdict .d { font-size: var(--step--1); color: var(--muted); }
+  @media (max-width: 720px) { .verdict { grid-template-columns: minmax(0, 1fr); } }
+  .up { color: var(--good); } .down { color: var(--bad); }
+  .box { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 16px; display: grid; gap: 10px; min-width: 0; }
+  .scroll { overflow-x: auto; }
+  svg.chart { display: block; width: 100%; min-width: 560px; height: auto; font-family: var(--font-body); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--step--1); color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.grp td { background: var(--bg); color: var(--muted); font-weight: 500; text-align: left; }
+  tr.keep td:first-child { box-shadow: inset 3px 0 0 var(--keep); }
+  tr.hi td:first-child { box-shadow: inset 3px 0 0 var(--hi); }
+  td.dl { font-weight: 500; }
+  .pairs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 760px) { .pairs { grid-template-columns: minmax(0, 1fr); } }
+  .pair { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 14px 16px; display: grid; gap: 6px; }
+  .pair h3 { font-size: var(--step-0); }
+  .pair p { font-size: var(--step--1); color: var(--muted); }
+  figure { margin: 0; display: grid; gap: 8px; }
+  figure img { border: 1px solid var(--line); border-radius: 8px; background: #FFFFFF; width: 100%; max-width: 760px; height: auto; }
+  figcaption { font-size: var(--step--1); color: var(--muted); max-width: 80ch; }
+  ul.notes { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 80ch; }
+  footer { font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+</style>
+
+<main class="page">
+  <header style="display:grid; gap:12px">
+    <div class="eyebrow">NTU2P 扩散主线 · 受试者留出验证集 · seed0 · 10000 步</div>
+    <h1>DCT 截断前后对比</h1>
+    <p class="lede">同一个扩散模型，局部关节的 DCT 只留前 11 阶（去掉约 1.7 Hz 以上的高频），和保留更多高频（20 阶，或不截断的 49 阶）各训练一次，比较分数。结论：保留高频几乎不提高精度，抖动却成倍增加。</p>
+  </header>
+
+  <section aria-labelledby="h-sum">
+    <h2 id="h-sum">一句话结果（对照 A：只改阶数，11 阶 vs 49 阶）</h2>
+    <div class="verdict">
+      <div><span class="k">精度 mpjpe（ode0）</span><span class="v">+0.3%</span><span class="d">0.1691 → 0.1697，低于单 seed 噪声约 0.8%，可视为不变</span></div>
+      <div><span class="k">抖动 jerk（ode0）</span><span class="v down">× 8.3</span><span class="d">15.4 → 127.4 m/s³</span></div>
+      <div><span class="k">单样本 2 Hz 以上能量</span><span class="v down">× 23</span><span class="d">GT 的 0.13 倍 → 2.86 倍，比真实数据还抖</span></div>
+    </div>
+    <div class="pairs">
+      <div class="pair"><h3>对照 A：带高噪声段配方分支（主线 BR 的设置）</h3><p>BR：骨盆 8 阶、局部 11 阶 ↔ BRfull：骨盆和局部都 49 阶（不截断，等价于直接在 xyz 残差上扩散，第 1 帧残差仍为 0）。今天新跑的对照实验。</p></div>
+      <div class="pair"><h3>对照 B：不带配方分支（上一轮的设置）</h3><p>B：局部 11 阶 ↔ J3：局部 20 阶（上一轮 JiT 流用的阶数）。11-03 第 1 阶段的结果。</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-jerk">
+    <h2 id="h-jerk">抖动：阶数越多越抖</h2>
+    <div class="box scroll">
+      <svg class="chart" id="c-jerk" viewBox="0 0 900 330" role="img" aria-label="各读出的 jerk 对数柱状图：11 阶都在 15 到 42 之间；20 阶为 34 到 59；49 阶为 118 到 590。"></svg>
+      <div class="legend"><span><i style="background:var(--keep)"></i>11 阶（截断，主线做法）</span><span><i style="background:var(--hi2)"></i>20 阶（J3）</span><span><i style="background:var(--hi)"></i>49 阶（不截断）</span><span>虚线：FD2 20.4 · GT 306.7（GT 自身含骨架拟合抖动）</span></div>
+    </div>
+    <p class="note">jerk 是加速度的变化率，逐帧抖动越多越大，对数纵轴。ode0 和中位数是确定性读出，单样本是从噪声采一个；落脚规划会给 jerk 加一点（抬脚落脚的加速），所以 BR 的 ode0 + 规划比 ode0 高。</p>
+  </section>
+
+  <section aria-labelledby="h-acc">
+    <h2 id="h-acc">精度：基本不变，只有一处例外</h2>
+    <div class="box scroll">
+      <svg class="chart" id="c-acc" viewBox="0 0 900 270" role="img" aria-label="各读出的 mpjpe：对照 A 中 49 阶与 11 阶几乎相同；对照 B 中 20 阶的 ode0 比 11 阶低 2.7%。"></svg>
+      <div class="legend"><span><i style="background:var(--keep)"></i>11 阶</span><span><i style="background:var(--hi2)"></i>20 阶</span><span><i style="background:var(--hi)"></i>49 阶</span><span>虚线：FD2 0.1722</span></div>
+    </div>
+    <ul class="notes">
+      <li><b>对照 A（有配方分支）</b>：三种读出的 mpjpe 差别都在 ±0.3% 以内，xyz_mse 反而略好 0.8–2.5%。保留高频没有带来精度。</li>
+      <li><b>对照 B（无配方分支）</b>：20 阶的 ode0 比 11 阶低 2.7%，这是唯一一处高频"有用"的迹象。但这是单个 seed：J3 在 seed1、seed2 上相对 FD2 只有 −0.65% / −1.02%（seed0 是 −2.12%），说明 seed0 偏乐观。加上配方分支以后，11 阶的 BR 在 3 个 seed 上相对 FD2 平均 −2.24%，已经超过 J3 在 seed1/2 上的水平。</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-tab">
+    <h2 id="h-tab">完整分数</h2>
+    <div class="table">
+      <table id="t-all">
+        <thead><tr><th>模型 · 读出</th><th>阶数</th><th>xyz_mse</th><th>xyz_mae</th><th>mpjpe</th><th>Δmpjpe</th><th>jerk</th><th>Δjerk</th><th>&gt;2 Hz 能量</th><th>1.2–2 Hz 摆动</th><th>滑行帧比</th><th>步数</th><th>穿地</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note">Δ 是同一组、同一读出下"高频版相对 11 阶版"的变化。"&gt;2 Hz 能量"和"1.2–2 Hz 摆动"都是相对 GT 的能量比。FD2 参照：xyz_mse 0.0193、mpjpe 0.1722、jerk 20.4、&gt;2 Hz 能量 0.009、摆动 0.626。</p>
+  </section>
+
+  <section aria-labelledby="h-frames">
+    <h2 id="h-frames">抽帧看：单样本连续 6 帧（#010 走开）</h2>
+    <figure>
+      <img src="consec_sample_010.png" alt="#010 走开，第 30 到 35 帧，三栏依次为 GT、11 阶单样本、49 阶单样本" loading="lazy">
+      <figcaption>每行相隔 1 帧（0.05 秒）。中栏（11 阶）的腿和手臂逐帧连续；右栏（49 阶）B 的膝盖在第 30→31→32 帧前后翻转，A 的手臂伸出又收回。这就是 jerk 590 在画面上的样子。</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="h-why">
+    <h2 id="h-why">为什么会这样</h2>
+    <ul class="notes">
+      <li>GT 骨架在 2 Hz 以上的能量，主要是拟合抖动和遮挡跳点，不是真实动作。阶数一多，这些抖动就成了扩散要学的目标，模型会把它们当成动作生成出来，单样本尤其明显。</li>
+      <li>截断到 11 阶，表示里根本写不出这些高频，生成的东西天然平滑；真实动作（走路 1–2 Hz、推手）几乎全在 11 阶以内，所以精度不受影响。原理见 <a href="https://claude.ai/artifact/M6a3hHRJzYVb72twm9cXP5">DCT 为什么能滤掉抖动</a>。</li>
+      <li>局限：都是单个 seed；STG 训练逐运行不确定，mpjpe 小于约 0.8% 的差别不能当真。抖动的差距是数倍，不受这个噪声影响。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>数据：<code>results/forecasting/ntu120_label/ntu2p_jitflow/subjval/fullband_s0/summary.json</code>（对照 A）、<code>…/bandflow_s0/summary.json</code>（对照 B）。实验记录：<code>docs/ai/context/20261105-104346-ntu2p-fullband-diffusion-control-result.md</code>、<code>20261103-224829-ntu2p-diffusion-full-prediction-result.md</code>。</span>
+  </footer>
+</main>
+
+<script type="application/json" id="scores">{"pairA": {"BR": {"ode0": {"xyz_mse": 0.02015073905861088, "xyz_mae": 0.08203622192023736, "mpjpe": 0.1691089686353197, "jerk_body": 15.373347408535, "dct_high_ratio": 0.011087612231965199, "dct_mid_ratio": 0.23210420299426626, "slide_frame_ratio": 0.198842345672602, "step_count": 1.3904109589041096, "foot_penetration_ratio": 0.0680161943319838}, "ode0plan": {"xyz_mse": 0.020279228709909596, "xyz_mae": 0.08221534410348305, "mpjpe": 0.1695901832961843, "jerk_body": 21.16196872457572, "dct_high_ratio": 0.019367623692809265, "dct_mid_ratio": 0.2679771598256408, "slide_frame_ratio": 0.029975200691313323, "step_count": 1.6575342465753424, "foot_penetration_ratio": 0.026639676113360326}, "sample": {"xyz_mse": 0.029132296214340186, "xyz_mae": 0.10405821259687786, "mpjpe": 0.21304809709309566, "jerk_body": 33.554186421862866, "dct_high_ratio": 0.1258984860094713, "dct_mid_ratio": 2.240724021589251, "slide_frame_ratio": 0.1070170072041375, "step_count": 1.7876712328767124, "foot_penetration_ratio": 0.1194331983805668}}, "BRfull": {"ode0": {"xyz_mse": 0.01998032772770295, "xyz_mae": 0.0823157709318134, "mpjpe": 0.16964954282590736, "jerk_body": 127.39162718612329, "dct_high_ratio": 0.07161379093841556, "dct_mid_ratio": 0.2676502793949495, "slide_frame_ratio": 0.1624088964338771, "step_count": 1.417808219178082, "foot_penetration_ratio": 0.04408906882591093}, "ode0plan": {"xyz_mse": 0.02008682308409378, "xyz_mae": 0.08242389982045903, "mpjpe": 0.16996544225495835, "jerk_body": 117.51022342721465, "dct_high_ratio": 0.08260190747052948, "dct_mid_ratio": 0.3004766948893953, "slide_frame_ratio": 0.028383257669953522, "step_count": 1.678082191780822, "foot_penetration_ratio": 0.025506072874493926}, "sample": {"xyz_mse": 0.028403895556444098, "xyz_mae": 0.10436668883451083, "mpjpe": 0.2134359143523552, "jerk_body": 589.6245886064023, "dct_high_ratio": 2.85754185385434, "dct_mid_ratio": 3.2656088379383528, "slide_frame_ratio": 0.1735832844727629, "step_count": 1.821917808219178, "foot_penetration_ratio": 0.09040485829959514}}}, "pairB": {"B": {"ode0": {"xyz_mse": 0.02128603448148681, "xyz_mae": 0.08412356919001954, "mpjpe": 0.17319208962714625, "jerk_body": 17.24748978618442, "dct_high_ratio": 0.0070907107574410926, "dct_mid_ratio": 0.10974236052294455, "slide_frame_ratio": 0.062251063130276146, "step_count": 1.8630136986301369, "foot_penetration_ratio": 0.061052631578947365}, "median16": {"xyz_mse": 0.020477698429634695, "xyz_mae": 0.08383611830984533, "mpjpe": 0.17245466814108706, "jerk_body": 42.31300020027168, "dct_high_ratio": 0.029621416328776715, "dct_mid_ratio": 0.17548821696947736, "slide_frame_ratio": 0.14135350855998172, "step_count": 1.6369863013698631, "foot_penetration_ratio": 0.06493927125506073}, "sample": {"xyz_mse": 0.029132196451593866, "xyz_mae": 0.10316322380412928, "mpjpe": 0.21196501223212072, "jerk_body": 28.836762827529448, "dct_high_ratio": 0.035948363932780905, "dct_mid_ratio": 0.47255868729985717, "slide_frame_ratio": 0.10019286647016554, "step_count": 1.7808219178082194, "foot_penetration_ratio": 0.10944331983805668}}, "J3": {"ode0": {"xyz_mse": 0.019735550372163777, "xyz_mae": 0.0820386150044951, "mpjpe": 0.16857342470271386, "jerk_body": 33.703884066343115, "dct_high_ratio": 0.03987179628462426, "dct_mid_ratio": 0.2694039835918847, "slide_frame_ratio": 0.05116389821517378, "step_count": 1.8904109589041096, "foot_penetration_ratio": 0.05522267206477733}, "median16": {"xyz_mse": 0.019542215934950813, "xyz_mae": 0.08299462448971474, "mpjpe": 0.17026930607040883, "jerk_body": 59.04561664982986, "dct_high_ratio": 0.08359657374008805, "dct_mid_ratio": 0.38613518082220977, "slide_frame_ratio": 0.11768229209961889, "step_count": 1.7123287671232876, "foot_penetration_ratio": 0.06696356275303644}, "sample": {"xyz_mse": 0.027770127646760782, "xyz_mae": 0.10238706860088023, "mpjpe": 0.2098551734919973, "jerk_body": 55.38119613805417, "dct_high_ratio": 0.1959828949845565, "dct_mid_ratio": 1.1155901640526797, "slide_frame_ratio": 0.08906377828897406, "step_count": 1.8886986301369864, "foot_penetration_ratio": 0.10488866396761133}}}, "fd2": {"xyz_mse": 0.019304528259314023, "xyz_mae": 0.08419753261181989, "mpjpe": 0.17222817616182784, "jerk_body": 20.40475491318208, "dct_high_ratio": 0.009344543176029493, "dct_mid_ratio": 0.6262378670439079, "slide_frame_ratio": 0.200354275498129, "step_count": 1.4589041095890412, "foot_penetration_ratio": 0.06396761133603239}, "gt_jerk": 306.74}</script>
+<script>
+(function () {
+  "use strict";
+  const S = JSON.parse(document.getElementById("scores").textContent);
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+  const COL = { 11: "var(--keep)", 20: "var(--hi2)", 49: "var(--hi)" };
+  const A = S.pairA, B = S.pairB;
+  // 分组：[组标签, [[阶数, 行]...]]
+  const groups = [
+    ["对照 A · ode0", [[11, A.BR.ode0], [49, A.BRfull.ode0]]],
+    ["对照 A · ode0+规划", [[11, A.BR.ode0plan], [49, A.BRfull.ode0plan]]],
+    ["对照 A · 单样本", [[11, A.BR.sample], [49, A.BRfull.sample]]],
+    ["对照 B · ode0", [[11, B.B.ode0], [20, B.J3.ode0]]],
+    ["对照 B · 中位数16", [[11, B.B.median16], [20, B.J3.median16]]],
+    ["对照 B · 单样本", [[11, B.B.sample], [20, B.J3.sample]]],
+  ];
+
+  function bars(id, key, opts) {
+    const svg = document.getElementById(id);
+    const W = 900, H = opts.H, L = 56, R = 12, T = 14, Bm = 46;
+    const y = opts.log
+      ? (v) => T + (H - T - Bm) * (1 - (Math.log10(v) - opts.lo) / (opts.hi - opts.lo))
+      : (v) => T + (H - T - Bm) * (1 - (v - opts.lo) / (opts.hi - opts.lo));
+    for (const v of opts.ticks) {
+      svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), style: "stroke: var(--line)" }));
+      svg.appendChild(el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end", style: "fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums" }, opts.fmt(v)));
+    }
+    for (const [v, name] of opts.refs) {
+      svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), style: "stroke: var(--muted); stroke-dasharray: 5 4" }));
+      svg.appendChild(el("text", { x: W - R - 4, y: y(v) - 5, "text-anchor": "end", style: "fill: var(--muted); font-size: 11px" }, name));
+    }
+    const gw = (W - L - R) / groups.length, bw = gw * 0.28;
+    groups.forEach(([label, items], gi) => {
+      const cx = L + gw * (gi + 0.5);
+      items.forEach(([order, row], i) => {
+        const x = cx + (i === 0 ? -bw - 3 : 3), v = row[key], top = y(v), base = H - Bm;
+        svg.appendChild(el("rect", { x, y: top, width: bw, height: Math.max(1, base - top), rx: 2, style: "fill: " + COL[order] }));
+        svg.appendChild(el("text", { x: x + bw / 2, y: top - 5, "text-anchor": "middle", style: "fill: var(--fg); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums" }, opts.val(v)));
+        svg.appendChild(el("text", { x: x + bw / 2, y: base + 13, "text-anchor": "middle", style: "fill: var(--muted); font-size: 10.5px" }, order + " 阶"));
+      });
+      svg.appendChild(el("text", { x: cx, y: H - 12, "text-anchor": "middle", style: "fill: var(--fg); font-size: 11.5px" }, label));
+    });
+    if (opts.sep) svg.appendChild(el("line", { x1: L + gw * 3, x2: L + gw * 3, y1: T, y2: H - 6, style: "stroke: var(--line); stroke-width: 2" }));
+  }
+  bars("c-jerk", "jerk_body", { H: 330, log: true, lo: 1, hi: Math.log10(800), ticks: [10, 30, 100, 300], fmt: (v) => String(v), val: (v) => v.toFixed(v < 100 ? 1 : 0), refs: [[S.fd2.jerk_body, "FD2 20.4"], [S.gt_jerk, "GT 306.7"]], sep: true });
+  bars("c-acc", "mpjpe", { H: 270, log: false, lo: 0.15, hi: 0.22, ticks: [0.15, 0.17, 0.19, 0.21], fmt: (v) => v.toFixed(2), val: (v) => v.toFixed(4), refs: [[S.fd2.mpjpe, "FD2 0.1722"]], sep: true });
+
+  // 明细表
+  const tb = document.querySelector("#t-all tbody");
+  const f = (v, d) => v.toFixed(d);
+  const pct = (a, b) => { const p = 100 * (b / a - 1); return (p > 0 ? "+" : "") + p.toFixed(p > -10 && p < 10 ? 2 : 0) + "%"; };
+  const rows = [
+    ["对照 A（有配方分支）", [["ode0", "ode0"], ["ode0plan", "ode0 + 落脚规划"], ["sample", "单样本"]], A.BR, A.BRfull, "BR", "BRfull", 49],
+    ["对照 B（无配方分支）", [["ode0", "ode0"], ["median16", "中位数 16"], ["sample", "单样本"]], B.B, B.J3, "B", "J3", 20],
+  ];
+  for (const [title, readouts, lo, hi, nlo, nhi, ohi] of rows) {
+    const g = document.createElement("tr"); g.className = "grp"; g.innerHTML = '<td colspan="13">' + title + "</td>"; tb.appendChild(g);
+    for (const [key, name] of readouts) {
+      for (const [m, row, order, cls] of [[nlo, lo[key], 11, "keep"], [nhi, hi[key], ohi, "hi"]]) {
+        const tr = document.createElement("tr"); tr.className = cls;
+        const base = lo[key];
+        const dm = cls === "hi" ? pct(base.mpjpe, row.mpjpe) : "—";
+        const dj = cls === "hi" ? pct(base.jerk_body, row.jerk_body) : "—";
+        const dmCls = cls === "hi" ? (row.mpjpe / base.mpjpe - 1 > 0.008 ? "down" : (row.mpjpe / base.mpjpe - 1 < -0.008 ? "up" : "")) : "";
+        tr.innerHTML = "<td>" + m + " · " + name + "</td><td>" + order + "</td><td>" + f(row.xyz_mse, 5) + "</td><td>" + f(row.xyz_mae, 5) + "</td><td>" + f(row.mpjpe, 5) +
+          '</td><td class="dl ' + dmCls + '">' + dm + "</td><td>" + f(row.jerk_body, 1) + '</td><td class="dl ' + (cls === "hi" ? "down" : "") + '">' + dj +
+          "</td><td>" + f(row.dct_high_ratio, 3) + "</td><td>" + f(row.dct_mid_ratio, 3) + "</td><td>" + f(row.slide_frame_ratio, 3) + "</td><td>" + f(row.step_count, 2) + "</td><td>" + f(row.foot_penetration_ratio, 4) + "</td>";
+        tb.appendChild(tr);
+      }
+    }
+  }
+})();
+</script>

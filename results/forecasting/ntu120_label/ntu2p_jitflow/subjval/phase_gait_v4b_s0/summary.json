@@ -1,0 +1,104 @@
+{
+  "diagnostics": {
+    "GT": {
+      "step_count": 2.287671232876712,
+      "slide_frame_ratio": 0.03444660175274389,
+      "stance_fraction": 0.34780821917808213,
+      "lr_forward_vel_corr": -0.3897961346421279,
+      "skate_gt_contact_speed_walk": 0.10040597131374468,
+      "mpjpe": 0.0,
+      "leg_err": 0.0
+    },
+    "S0-1 GT 相位 + GT root": {
+      "step_count": 2.1575342465753424,
+      "slide_frame_ratio": 0.03834588679631658,
+      "stance_fraction": 0.36328767123287664,
+      "lr_forward_vel_corr": -0.37765310686803444,
+      "skate_gt_contact_speed_walk": 0.14537301957695675,
+      "mpjpe": 0.0047406800480533995,
+      "leg_err": 0.04345623377382283
+    },
+    "S0-2 预测相位 + GT root": {
+      "step_count": 2.267123287671233,
+      "slide_frame_ratio": 0.04225404507998302,
+      "stance_fraction": 0.3282876712328767,
+      "lr_forward_vel_corr": -0.2798985217735706,
+      "skate_gt_contact_speed_walk": 0.23115305197976718,
+      "mpjpe": 0.00905718442329453,
+      "leg_err": 0.08302419054686651
+    },
+    "BR:ode0 腿（参照）": {
+      "step_count": 1.3904109589041096,
+      "slide_frame_ratio": 0.198842345672602,
+      "stance_fraction": 0.445,
+      "lr_forward_vel_corr": -0.06854512374040465,
+      "skate_gt_contact_speed_walk": 0.20623637978451737,
+      "mpjpe": 0.16910897474551154,
+      "leg_err": 0.127346180502284
+    },
+    "BR:ode0 的腿接到 GT root（参照）": {
+      "step_count": 1.3904109589041096,
+      "slide_frame_ratio": 0.3165643006753517,
+      "stance_fraction": 0.3334931506849315,
+      "lr_forward_vel_corr": 0.09904182877951141,
+      "skate_gt_contact_speed_walk": 0.2377377712239238,
+      "mpjpe": 0.01028537006933676,
+      "leg_err": 0.09428255896892031
+    }
+  },
+  "rows": {
+    "BR:ode0": {
+      "mpjpe": 0.1691089686353197,
+      "xyz_mse": 0.02015073905861088,
+      "xyz_mae": 0.08203622192023736,
+      "primary_excess_antic": 0.033029980545505065,
+      "missed_contact_total": 43,
+      "contact_rmse_push": 0.20695012098748178,
+      "contact_rmse_all": 0.19179383788048257,
+      "wrong_overlap": 0.004939271255060729,
+      "slide_frame_ratio": 0.198842345672602,
+      "step_count": 1.3904109589041096,
+      "jerk_body": 15.373347408535,
+      "foot_penetration_ratio": 0.0680161943319838,
+      "bone_rel_err_body": 1.059678918384041e-07,
+      "dct_mid_ratio": 0.23210420299426626,
+      "gait_sep_corr_f01_10": 0.4601042112187775,
+      "dct_low_ratio": 0.626536431518481,
+      "stance_fraction": 0.445,
+      "lr_forward_vel_corr": -0.06854512374040465,
+      "skate_gt_contact_speed_walk": 0.20623637978451737
+    },
+    "PGait": {
+      "mpjpe": 0.16974786454849397,
+      "xyz_mse": 0.02016338865887298,
+      "xyz_mae": 0.08232040332275846,
+      "primary_excess_antic": 0.033029980545505065,
+      "missed_contact_total": 43,
+      "contact_rmse_push": 0.20695012098748178,
+      "contact_rmse_all": 0.19179383788048257,
+      "wrong_overlap": 0.006234817813765182,
+      "slide_frame_ratio": 0.02890502040983085,
+      "step_count": 2.1095890410958904,
+      "jerk_body": 20.53001226347538,
+      "foot_penetration_ratio": 0.018097165991902833,
+      "bone_rel_err_body": 1.1032910776837217e-07,
+      "dct_mid_ratio": 0.25673706001097635,
+      "gait_sep_corr_f01_10": 0.4789499304635175,
+      "dct_low_ratio": 0.6327719433217884,
+      "stance_fraction": 0.36376712328767125,
+      "lr_forward_vel_corr": -0.2891166209535909,
+      "skate_gt_contact_speed_walk": 0.27836210867982797
+    }
+  },
+  "guards": {
+    "mpjpe ≤ 1.005×BR": true,
+    "xyz_mse ≤ 1.02×BR": true,
+    "jerk ≤ 24.5": true,
+    "穿地 ≤ BR+0.01": true,
+    "骨长 ≤ 1e-5": true,
+    "摆动 gate": true,
+    "超额后退 ≤ 1.1×BR": true,
+    "漏接触 ≤ 1.1×BR": true
+  },
+  "level": "可替代落脚规划层"
+}
