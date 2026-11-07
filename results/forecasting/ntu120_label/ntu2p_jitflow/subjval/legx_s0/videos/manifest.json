@@ -1,0 +1,50 @@
+[
+  {
+    "index": 28,
+    "group": "推人",
+    "sample_id": "S005C001P004R002A003",
+    "action": "pushing",
+    "mpjpe": {
+      "BR": 0.19909005456681436,
+      "XL": 0.17617870023596965
+    },
+    "video": "case_028_S005C001P004R002A003.mp4",
+    "poster": "case_028_S005C001P004R002A003.jpg"
+  },
+  {
+    "index": 2,
+    "group": "推人",
+    "sample_id": "S001C001P004R001A003",
+    "action": "pushing",
+    "mpjpe": {
+      "BR": 0.13951709040526966,
+      "XL": 0.14305372443314884
+    },
+    "video": "case_002_S001C001P004R001A003.mp4",
+    "poster": "case_002_S001C001P004R001A003.jpg"
+  },
+  {
+    "index": 194,
+    "group": "跟随",
+    "sample_id": "S026C001P074R001A022",
+    "action": "follow",
+    "mpjpe": {
+      "BR": 0.33247412424888334,
+      "XL": 0.3978977431608916
+    },
+    "video": "case_194_S026C001P074R001A022.mp4",
+    "poster": "case_194_S026C001P074R001A022.jpg"
+  },
+  {
+    "index": 10,
+    "group": "走开",
+    "sample_id": "S001C001P004R001A011",
+    "action": "walking apart",
+    "mpjpe": {
+      "BR": 0.17479691318365767,
+      "XL": 0.180442392300473
+    },
+    "video": "case_010_S001C001P004R001A011.mp4",
+    "poster": "case_010_S001C001P004R001A011.jpg"
+  }
+]

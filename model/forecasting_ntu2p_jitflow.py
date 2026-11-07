@@ -71,6 +71,10 @@ STG_PARTS = (
     tuple(_STATE_ROW[j] for j in (2, 5, 8, 11)),
 )
 TORSO_PART, ARM_PARTS = 0, (1, 2)
+# 着地概率头的关节顺序与 utils.ntu2p_kinematic_projection.foot_contact_mask 一致：左右踝、左右脚掌。
+CONTACT_FEET = (7, 8, 10, 11)
+# 骨架邻接图（SK）：粗部位里躯干连四肢、四肢互不直连；时间邻域 ±2 块，6 层后感受野覆盖全部 12 块。
+SKELETON_TIME_RADIUS = 2
 # 细粒度关节组（13 组）：手、肘、肩、胸、头分开，使"A 的手 ↔ B 的肩"成为独立的跨人边。
 STG_PARTS_FINE = tuple(
     tuple(_STATE_ROW[j] for j in group)
@@ -120,6 +124,9 @@ CONFIG_KEYS = (
     "canonical_ab_fallback",
     "part_scheme",
     "joint_graph",
+    "leg_xattn",
+    "skeleton_mask",
+    "contact_head",
 )
 
 
@@ -178,7 +185,10 @@ class FlowLegStream(NTU2PLegStream):
         hidden = hidden + self.noisy_in(noisy)
         if self.sc_in is not None and sc is not None:
             hidden = hidden + self.sc_in(sc)
-        coeffs = self.mlp(self.norm(hidden))
+        feature = self.norm(hidden)
+        # 着地概率头（可选）复用同一份腿部特征：着地与否和腿怎么动由同一处决定。
+        self.last_feature = feature
+        coeffs = self.mlp(feature)
         return coeffs.view(coeffs.shape[:2] + (self.out_dct_k, len(LEG_JOINTS), XYZ_COORD_DIM))
 
 
@@ -302,7 +312,7 @@ class STGDenoiser(nn.Module):
     BOTTLENECK = 128
 
     def __init__(self, obs_len, pred_len, patch_len, width, heads, num_blocks, cond_dim, dropout, self_cond, contact_graph,
-                 causal_cross, codec, mlp_ratio=4, parts=STG_PARTS, joint_graph=False):
+                 causal_cross, codec, mlp_ratio=4, parts=STG_PARTS, joint_graph=False, skeleton_mask=False):
         super(STGDenoiser, self).__init__()
         self.parts = tuple(tuple(part) for part in parts)
         self.joint_graph = bool(joint_graph)
@@ -315,6 +325,7 @@ class STGDenoiser(nn.Module):
         self.self_cond = bool(self_cond)
         self.contact_graph = bool(contact_graph)
         self.causal_cross = bool(causal_cross)
+        self.skeleton_mask = bool(skeleton_mask)
         self.codec = codec
         channels = 2 if self.self_cond else 1
         self.embed = nn.ModuleList(
@@ -370,6 +381,14 @@ class STGDenoiser(nn.Module):
         self.register_buffer("pair_dt", (patch.view(1, -1) - patch.view(-1, 1) + num_patches - 1), persistent=False)
         future_cross = (cross > 0) & (patch.view(1, -1) > patch.view(-1, 1))
         self.register_buffer("causal_mask", future_cross, persistent=False)
+        # 骨架邻接：同人只看同部位或骨架相连部位，跨人只经躯干相连；只在时间邻域内可见。
+        torso_q, torso_k = (part.view(-1, 1) == TORSO_PART), (part.view(1, -1) == TORSO_PART)
+        same_part = part.view(-1, 1) == part.view(1, -1)
+        linked = same_part | torso_q | torso_k  # 粗部位下躯干与四肢相连，四肢之间不连
+        near = (patch.view(1, -1) - patch.view(-1, 1)).abs() <= SKELETON_TIME_RADIUS
+        is_cross = cross > 0
+        allowed = near & ((is_cross & (torso_q | torso_k)) | (~is_cross & linked))  # torch 1.7 的 where 不支持布尔张量
+        self.register_buffer("skeleton_block", ~allowed, persistent=False)
 
     def _static_bias(self):
         part = self.part_bias[:, self.pair_cross, self.pair_part_q, self.pair_part_k]
@@ -377,6 +396,8 @@ class STGDenoiser(nn.Module):
         bias = part + time
         if self.causal_cross:
             bias = bias.masked_fill(self.causal_mask, -1e4)
+        if self.skeleton_mask:
+            bias = bias.masked_fill(self.skeleton_block, -1e4)
         return bias.unsqueeze(0)  # [1,h,N,N]
 
     def _graph_bias(self, graph):
@@ -461,6 +482,61 @@ class STGDenoiser(nn.Module):
         return root / root_scale, local / local_scale, ctx
 
 
+# 跨人腿部时间 Transformer（XL）：每条腿取骨盆 + 髋/膝/踝/脚，状态行号与 LEG_JOINTS 的左右交错顺序对应。
+LEG_SIDE_ROWS = ((0, 1, 4, 7, 10), (0, 2, 5, 8, 11))
+LEG_X_WIDTH = 128
+LEG_X_BLOCKS = 2
+
+
+class LegCrossTransformer(nn.Module):
+    """两人双腿 × 5 帧块的全连接注意力，输出腿局部位置的时域修正（零初始化，初始时不改变腿流输出）。
+
+    腿流 MLP 每人独立，只经主干 root 间接知道对方；这里让 A、B 的腿在同一场景坐标里按时间块互相可见，
+    以检验"一人迈步、另一人后退"这类跨人腿部关系能否带来增量。
+    """
+
+    def __init__(self, obs_len, pred_len, patch_len, cond_dim, dropout):
+        super(LegCrossTransformer, self).__init__()
+        self.obs_len, self.pred_len, self.patch_len = int(obs_len), int(pred_len), int(patch_len)
+        self.num_patches = (self.obs_len + self.pred_len) // self.patch_len
+        self.num_obs_patches = self.obs_len // self.patch_len
+        joints = len(LEG_SIDE_ROWS[0])
+        self.embed = nn.Linear(self.patch_len * joints * XYZ_COORD_DIM * 2, LEG_X_WIDTH)
+        self.leg_pos = nn.Parameter(torch.randn(2, LEG_X_WIDTH) * 0.02)
+        self.patch_pos = nn.Parameter(torch.randn(self.num_patches, LEG_X_WIDTH) * 0.02)
+        self.role_pos = nn.Parameter(torch.randn(2, LEG_X_WIDTH) * 0.02)
+        self.obs_flag = nn.Parameter(torch.randn(2, LEG_X_WIDTH) * 0.02)
+        self.blocks = nn.ModuleList([_STGBlock(LEG_X_WIDTH, 4, cond_dim, 4, dropout) for _ in range(LEG_X_BLOCKS)])
+        self.norm = RMSNorm(LEG_X_WIDTH, affine=False)
+        self.head = nn.Linear(LEG_X_WIDTH, self.patch_len * (joints - 1) * XYZ_COORD_DIM)
+        nn.init.zeros_(self.head.weight)
+        nn.init.zeros_(self.head.bias)
+
+    def _patchify(self, full):
+        """[B,60,2,29,3] 场景系绝对位置 -> [B,2,2(腿),P,patch*5*3]。"""
+        batch_size = int(full.shape[0])
+        legs = torch.stack([full[:, :, :, list(rows)] for rows in LEG_SIDE_ROWS], dim=3)  # [B,60,2,2,5,3]
+        legs = legs.view(batch_size, self.num_patches, self.patch_len, 2, 2, len(LEG_SIDE_ROWS[0]), XYZ_COORD_DIM)
+        return legs.permute(0, 3, 4, 1, 2, 5, 6).reshape(batch_size, 2, 2, self.num_patches, -1)
+
+    def forward(self, noisy_full, est_full, cond):
+        """两条轨迹 [B,60,2,29,3]（场景系）；返回腿局部位置修正 [B,50,2,8,3]（场景系，LEG_JOINTS 顺序）。"""
+        batch_size = int(noisy_full.shape[0])
+        noisy, est = self._patchify(noisy_full), self._patchify(est_full)
+        tokens = self.embed(torch.cat((noisy, est), dim=-1))  # 观测块里两份都是真实观测
+        flags = torch.cat((self.obs_flag[:1].expand(self.num_obs_patches, -1),
+                           self.obs_flag[1:].expand(self.num_patches - self.num_obs_patches, -1)))
+        tokens = tokens + self.leg_pos.view(1, 1, 2, 1, -1) + self.patch_pos + flags + self.role_pos.view(1, 2, 1, 1, -1)
+        tokens = tokens.reshape(batch_size, 2, 2 * self.num_patches, LEG_X_WIDTH)
+        bias = tokens.new_zeros(1, 4, 4 * self.num_patches, 4 * self.num_patches)
+        for block in self.blocks:
+            tokens = block(tokens, cond, bias)
+        tokens = self.norm(tokens).view(batch_size, 2, 2, self.num_patches, LEG_X_WIDTH)[:, :, :, self.num_obs_patches :]
+        out = self.head(tokens).view(batch_size, 2, 2, self.num_patches - self.num_obs_patches, self.patch_len, 4, XYZ_COORD_DIM)
+        out = out.permute(0, 3, 4, 1, 5, 2, 6).reshape(batch_size, self.pred_len, 2, 8, XYZ_COORD_DIM)  # 关节、左右交错
+        return out
+
+
 def _repeat(value, times):
     if torch.is_tensor(value):
         return value.repeat_interleave(int(times), dim=0)
@@ -500,6 +576,9 @@ class NTU2PJiTFlow(nn.Module):
         canonical_ab_fallback="camera_x",
         part_scheme="coarse",
         joint_graph=False,
+        leg_xattn=False,
+        skeleton_mask=False,
+        contact_head=False,
     ):
         super(NTU2PJiTFlow, self).__init__()
         self.model_type = MODEL_TYPE
@@ -518,6 +597,9 @@ class NTU2PJiTFlow(nn.Module):
             raise ValueError("细粒度部位只用于 stg 去噪器，且不与按粗部位定义的 contact_graph 同用")
         if joint_graph and not (denoiser == "stg" and self_cond):
             raise ValueError("joint_graph 需要 stg 去噪器与 self_cond（距离边读自己的上一轮估计）")
+        if skeleton_mask and (denoiser != "stg" or part_scheme != "coarse"):
+            raise ValueError("skeleton_mask 只定义在 stg 去噪器的粗部位（5 组）上")
+        self.skeleton_mask = bool(skeleton_mask)
         self.part_scheme, self.joint_graph = str(part_scheme), bool(joint_graph)
         self.denoiser_type = str(denoiser)
         self.self_cond, self.contact_graph, self.causal_cross = bool(self_cond), bool(contact_graph), bool(causal_cross)
@@ -543,8 +625,22 @@ class NTU2PJiTFlow(nn.Module):
         else:
             self.net = STGDenoiser(self.obs_len, self.pred_len, self.patch_len, self.stg_width, self.stg_heads, self.stg_blocks,
                                    self.cond_dim, self.dropout, self.self_cond, self.contact_graph, self.causal_cross, self.codec,
-                                   parts=PART_SCHEMES[self.part_scheme], joint_graph=self.joint_graph)
+                                   parts=PART_SCHEMES[self.part_scheme], joint_graph=self.joint_graph,
+                                   skeleton_mask=self.skeleton_mask)
         self.leg_net = FlowLegStream(self.obs_len, self.root_k, self.local_k, self.net.ctx_dim, self.cond_dim, self.self_cond)
+        self.leg_xattn = bool(leg_xattn)
+        if self.leg_xattn:
+            # 在 fork 出的随机流里初始化：其余参数初始化与同 seed 的 BR 一致，配对比较只差这个模块。
+            with torch.random.fork_rng(devices=[]):
+                self.leg_x = LegCrossTransformer(self.obs_len, self.pred_len, self.patch_len, self.cond_dim, self.dropout)
+        self.contact_head = bool(contact_head)
+        self.last_contact_logits = None
+        if self.contact_head:
+            # 每人每个未来帧 4 个脚关节（左右踝、左右脚掌）的着地 logit；零初始化（概率 0.5），fork 随机流不改变其余初始化。
+            with torch.random.fork_rng(devices=[]):
+                self.contact_net = nn.Sequential(nn.GELU(), nn.Linear(LEG_STREAM_WIDTH, self.pred_len * len(CONTACT_FEET)))
+            nn.init.zeros_(self.contact_net[-1].weight)
+            nn.init.zeros_(self.contact_net[-1].bias)
         weights = torch.ones(NTU_SMPLX_BODY_JOINTS, dtype=torch.float64)
         weights[25:] = 0.0
         weights[list(FINGER_ROOTS)] = 1.0
@@ -695,9 +791,9 @@ class NTU2PJiTFlow(nn.Module):
         else:
             geo = self._part_centroids(prep, sc) if self.joint_graph else None
             root, local, ctx = self.net(prep, z_root, z_local, cond, sc=sc, graph=graph, scales=(self.root_scale, self.local_scale), geo=geo)
-        return self._legs(prep, root, local, ctx, cond, z_local, sc)
+        return self._legs(prep, root, local, ctx, cond, z_local, sc, z_root)
 
-    def _legs(self, prep, root, local, ctx, cond, z_local, sc):
+    def _legs(self, prep, root, local, ctx, cond, z_local, sc, z_root=None):
         """条件化腿流在个人朝向系里给出腿 x̂ 系数，替换主干的腿行；系数与向量同样按旋转变换。"""
         rotation = prep["rotation"]
         per_coeff = rotation.unsqueeze(2)  # [B,2,1,3,3]
@@ -712,8 +808,24 @@ class NTU2PJiTFlow(nn.Module):
         root_features = torch.cat((prep["pelvis_features"], root_individual.reshape(batch_size, 2, -1)), dim=-1)
         leg_sc = None if sc is None else to_individual(sc[1])
         legs = self.leg_net(prep["leg_features"], root_features, ctx.detach(), cond.detach(), to_individual(z_local), leg_sc)
+        if self.contact_head:
+            logits = self.contact_net(self.leg_net.last_feature)  # [B,2,T*4]
+            self.last_contact_logits = logits.view(batch_size, 2, self.pred_len, len(CONTACT_FEET)).transpose(1, 2)  # [B,T,2,4]
         legs = self._to_person_coeff(rotate_rows_transposed(legs, per_joint))
+        if self.leg_xattn:
+            legs = legs + self._leg_cross(prep, root, local, legs, z_root, z_local, cond)
         return root, local.index_copy(3, self.leg_rows, legs)
+
+    def _leg_cross(self, prep, root, local, legs, z_root, z_local, cond):
+        """跨人腿部修正 -> 归一化的腿系数增量 [B,2,K,8,3]（人物系）。"""
+        obs = prep["obs_canon"][:, :, :, list(STATE_JOINTS)]
+        last = obs[:, -1:]
+        to_scene = lambda r, l: last + self._to_person(self.codec.decode(r * self.root_scale, l * self.local_scale))  # noqa: E731
+        noisy = torch.cat((obs, to_scene(z_root, z_local)), dim=1)
+        est = torch.cat((obs, to_scene(root.detach(), local.index_copy(3, self.leg_rows, legs))), dim=1)
+        fix = self._to_person(self.leg_x(noisy, est, cond.detach()))  # [B,50,2,8,3] 人物系
+        coeffs = torch.einsum("kt,btpjc->bpkjc", self.codec.local_pinv.to(fix.dtype), fix)
+        return coeffs / self.local_scale
 
     def _to_person_coeff(self, value):
         """人物系 <-> 场景系（对合）：系数张量的人物维在 dim=1。"""

@@ -1,0 +1,932 @@
+<title>NTU2P 两代模型架构</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<script>window.MathJax = { tex: { inlineMath: [["\\(", "\\)"]] }, svg: { fontCache: "global" } };</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.js" async></script>
+<style>
+  /* 版式：单栏；先"输入与输出"骨架动画，再两张纵向流程图（左图右说明面板，面板随滚动停留），最后对照表。
+     颜色沿用对比页：A 蓝 / B 红是骨架人物色；青绿标当前步骤与扩散新部件，灰标 FD2 独有部件。 */
+  :root {
+    --bg: #F5F7FA;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --accent: #0E7C74;
+    --accent-tint: #E2F3F1;
+    --old: #8A94A3;
+    --old-tint: #EEF0F3;
+    --good: #1F7A3A;
+    --bad: #B4381F;
+    --person-a: #2F6BFF;
+    --person-b: #E5484D;
+    --ghost: #AAB3BF;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+      --good: #5CC27A; --bad: #F08A6E; --person-a: #6C97FF; --person-b: #FF7A7E; --ghost: #4A5563; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+    --good: #5CC27A; --bad: #F08A6E; --person-a: #6C97FF; --person-b: #FF7A7E; --ghost: #4A5563; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.7; }
+  .page {
+    max-width: 1120px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 64px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); font-weight: 700; }
+  h2 { font-size: var(--step-2); font-weight: 700; }
+  h3 { font-size: var(--step-1); font-weight: 700; }
+  p { margin: 0; max-width: 70ch; }
+  section { display: grid; gap: 20px; min-width: 0; }
+  a { color: var(--accent); }
+  code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .lede { color: var(--muted); }
+  nav.jump { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--step--1); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: var(--step--1); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; color: var(--muted); background: var(--panel); font-variant-numeric: tabular-nums; }
+  .chip b { color: var(--fg); font-weight: 500; }
+
+  button { font: inherit; font-size: var(--step--1); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
+  button:focus-visible, a:focus-visible, .node:focus-visible, .scrub:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .controls .sep { width: 1px; height: 22px; background: var(--line); margin-inline: 4px; }
+
+  /* 输入与输出 */
+  .io { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .io { grid-template-columns: minmax(0, 1fr); } }
+  .stage { display: grid; gap: 10px; min-width: 0; }
+  .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .pnl { display: grid; gap: 4px; min-width: 0; }
+  .pnl .cap { font-size: var(--step--1); color: var(--muted); display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+  .pnl .cap b { color: var(--fg); font-weight: 500; }
+  canvas.skel { width: 100%; aspect-ratio: 1 / 1.05; max-width: 100%; display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  .scrub { position: relative; height: 30px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); cursor: pointer; overflow: hidden; touch-action: none; }
+  .scrub .obs { position: absolute; inset: 0 auto 0 0; width: calc(100% / 6); background: var(--accent-tint); border-right: 1px solid var(--accent); }
+  .scrub .lab { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.72rem; color: var(--muted); pointer-events: none; white-space: nowrap; }
+  .scrub .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); left: 0; }
+  .timeinfo { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .specs { display: grid; gap: 14px; }
+  .spec { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 14px 16px; display: grid; gap: 8px; }
+  .spec h3 { font-size: var(--step-0); display: flex; gap: 8px; align-items: baseline; }
+  .spec h3 span { font-size: var(--step--1); color: var(--muted); font-weight: 400; }
+  .spec dl { margin: 0; display: grid; gap: 6px; }
+  .spec dt { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); }
+  .spec dd { margin: 0; font-size: var(--step--1); color: var(--muted); }
+  .shape-legend { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+  .shape-legend span { color: var(--fg); }
+
+  /* 流程图 + 说明面板 */
+  .arch { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .arch { grid-template-columns: minmax(0, 1fr); } }
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px; }
+  .diagram svg { display: block; width: 100%; min-width: 560px; height: auto; color: var(--fg); font-family: var(--font-body); }
+  .side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 16px; min-width: 0; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .side .count { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .side p { font-size: var(--step--1); line-height: 1.75; }
+  .side .shape { font-family: var(--font-mono); font-size: 0.78rem; background: var(--accent-tint); color: var(--accent); border-radius: 6px; padding: 6px 10px; overflow-wrap: anywhere; }
+  .side canvas.skel { aspect-ratio: 1.35 / 1; }
+  .side .mini-cap { font-size: var(--step--1); color: var(--muted); }
+  .note { font-size: var(--step--1); color: var(--muted); max-width: 90ch; }
+
+  svg .node rect { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; transition: fill .25s, stroke .25s; }
+  svg .node.diff rect { fill: var(--accent-tint); stroke: var(--accent); stroke-opacity: .45; }
+  svg .node.only rect { fill: var(--old-tint); stroke: var(--old); stroke-dasharray: 4 3; }
+  svg .node.side-in rect { fill: var(--bg); }
+  svg .node { cursor: pointer; }
+  svg .node.done rect { stroke: var(--accent); stroke-opacity: .55; }
+  svg .node.on rect { stroke: var(--accent); stroke-width: 2.4; stroke-opacity: 1; stroke-dasharray: none; }
+  svg .t1 { font-size: 13px; font-weight: 700; fill: currentColor; }
+  svg .t2 { font-size: 11px; fill: var(--muted); }
+  svg .t3 { font-size: 10.5px; fill: var(--accent); font-family: var(--font-mono); }
+  svg .lbl { font-size: 11px; fill: var(--muted); }
+  svg .lbl-a { font-size: 11.5px; fill: var(--accent); font-weight: 500; }
+  svg .edge { stroke: var(--muted); stroke-width: 1.3; fill: none; }
+  svg .edge.flow { stroke-dasharray: 5 4; animation: march 1.2s linear infinite; }
+  svg .edge.loop { stroke: var(--accent); stroke-width: 1.8; }
+  svg .head { fill: var(--muted); }
+  svg .head-a { fill: var(--accent); }
+  svg .box-loop { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  svg .box-mix { fill: none; stroke: var(--old); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  svg .meter-bg { fill: var(--line); }
+  svg .meter { fill: var(--accent); }
+  svg .dot { fill: var(--accent); }
+  svg .dot-ring { fill: none; stroke: var(--accent); stroke-width: 2; opacity: .35; }
+  @keyframes march { to { stroke-dashoffset: -18; } }
+
+  /* 对照表 */
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { white-space: nowrap; font-weight: 500; }
+  td.same { color: var(--muted); }
+  .up { color: var(--good); } .down { color: var(--bad); }
+  .feet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .feet { grid-template-columns: minmax(0, 1fr); } }
+  .feet-fig { margin: 0; display: grid; gap: 8px; min-width: 0; }
+  .feet-fig .diagram svg { min-width: 460px; }
+  ol.feet-steps { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; font-size: var(--step--1); line-height: 1.8; min-width: 0; }
+  ol.feet-steps li { overflow-x: auto; }
+  footer { font-size: var(--step--1); color: var(--muted); display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 20px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    svg .edge.flow { animation: none; }
+    svg .node rect { transition: none; }
+  }
+</style>
+
+<main class="page">
+  <header style="display:grid; gap:14px">
+    <div class="eyebrow">NTU120 双人动作预测 · 观测 10 帧 → 预测 50 帧 · 20 fps</div>
+    <h1>NTU2P 两代模型架构</h1>
+    <p class="lede">两个模型吃同样的输入、吐同样形状的输出。原始 DCT 模型 FD2 一次前向直接算出答案；现在的主线是扩散模型，从"两个人原地不动"这个起点出发，循环 20 步逐渐把动作生成出来，最后再由落脚规划层把脚改成真正迈步。流程图会自动播放，也可以点任意一级跳过去看。</p>
+    <nav class="jump" aria-label="页内跳转">
+      <a href="#io">输入与输出</a><a href="#main">扩散主线</a><a href="#feet">脚怎么钉在地面上</a><a href="#fd2">原始 DCT 模型 FD2</a><a href="#diff">两者对照</a>
+    </nav>
+  </header>
+
+  <!-- 输入与输出 -->
+  <section id="io" aria-labelledby="h-io">
+    <h2 id="h-io">输入是什么，输出是什么</h2>
+    <div class="io">
+      <div class="stage">
+        <div class="controls">
+          <button type="button" id="io-play" aria-pressed="true">暂停</button>
+          <span class="sep" aria-hidden="true"></span>
+          <button type="button" class="case-btn" data-case="0" aria-pressed="true">#028 推人</button>
+          <button type="button" class="case-btn" data-case="1" aria-pressed="false">#010 走开</button>
+          <span class="sep" aria-hidden="true"></span>
+          <button type="button" id="io-slow" aria-pressed="false">0.5 倍速</button>
+        </div>
+        <div class="panels">
+          <div class="pnl"><div class="cap"><b>真实动作（GT）</b></div><canvas class="skel" id="cv-gt" aria-label="真实动作骨架动画"></canvas></div>
+          <div class="pnl"><div class="cap"><b>原始 DCT 模型 FD2</b><span id="err-fd2"></span></div><canvas class="skel" id="cv-fd2" aria-label="FD2 预测骨架动画"></canvas></div>
+          <div class="pnl"><div class="cap"><b>扩散主线</b><span id="err-main"></span></div><canvas class="skel" id="cv-main" aria-label="扩散主线预测骨架动画"></canvas></div>
+        </div>
+        <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="播放位置" aria-valuemin="1" aria-valuemax="60" aria-valuenow="1">
+          <div class="obs"></div>
+          <span class="lab" style="left:8px">输入 10 帧</span>
+          <span class="lab" style="left:calc(100%/6 + 8px)">输出 50 帧（模型预测）</span>
+          <div class="head" id="scrub-head"></div>
+        </div>
+        <div class="timeinfo" id="io-time">第 1 帧 / 60 · 0.00 s · 输入</div>
+        <p class="note">蓝色是 A（施动的人），红色是 B（受动的人）；预测段里灰色细线是真实动作，方便对照。视角是规范坐标系的侧视：A 在左、B 在右。前 10 帧三栏完全相同，这就是模型看到的全部输入。</p>
+      </div>
+      <div class="specs">
+        <div class="spec">
+          <h3>输入 <span>两样东西</span></h3>
+          <dl>
+            <dt>obs_xyz &nbsp;[B, 10, 2, 55, 3]</dt>
+            <dd>观测到的 10 帧（0.5 秒）双人骨架：每个人 55 个 SMPL-X 关节的 xyz 坐标，相机坐标系，单位米。</dd>
+            <dt>action &nbsp;[B]</dt>
+            <dd id="action-dd">这段动作的类别编号，26 类双人动作之一。</dd>
+          </dl>
+        </div>
+        <div class="spec">
+          <h3>输出 <span>一样东西</span></h3>
+          <dl>
+            <dt>pred_xyz &nbsp;[B, 50, 2, 55, 3]</dt>
+            <dd>接下来 50 帧（2.5 秒）两个人的 55 个关节坐标，坐标系与输入相同。第 1 帧的残差为 0，即从观测末帧接上。</dd>
+          </dl>
+        </div>
+        <div class="shape-legend">
+          <span>B</span> 一批样本数 · <span>10 / 50</span> 帧数<br>
+          <span>2</span> 两个人：A 施动、B 受动<br>
+          <span>55</span> 身体 25 个（含下巴、双眼）+ 每只手 15 个指节<br>
+          <span>3</span> x, y, z（米）
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 扩散主线 -->
+  <section id="main" aria-labelledby="h-main">
+    <h2 id="h-main">现在的主线：扩散 BR:ode0 + 落脚规划层</h2>
+    <div class="chips">
+      <span class="chip"><b>4.57 M</b> 参数</span>
+      <span class="chip">去噪器前向 <b>39 次</b>（Heun 20 步）</span>
+      <span class="chip">生成对象：未来 50 帧残差的 <b>DCT 系数</b></span>
+      <span class="chip">读出 <b>ode0</b>：起点 z = 0，确定性</span>
+    </div>
+    <div class="controls" data-for="main">
+      <button type="button" class="d-play" aria-pressed="true">暂停</button>
+      <button type="button" class="d-prev">上一步</button>
+      <button type="button" class="d-next">下一步</button>
+      <button type="button" class="d-restart">从头播放</button>
+    </div>
+    <div class="arch">
+      <div class="diagram">
+        <svg id="svg-main" viewBox="0 0 680 1150" role="img" aria-label="扩散主线流程：输入观测与动作标签，规范化后进入 20 步采样循环（状态 z、时空 token、STG Transformer、输出头得到 x̂、腿流、Heun 更新），循环结束后经 IDCT×ramp、组装 55 关节、旋回相机系、骨架投影、落脚规划，输出未来 50 帧。">
+          <defs>
+            <marker id="m-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head"/></marker>
+            <marker id="m-aha" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head-a"/></marker>
+          </defs>
+          <!-- 连线（在节点下层） -->
+          <g class="edges">
+            <line class="edge flow" x1="242" y1="72" x2="242" y2="101" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="437" y1="72" x2="437" y2="101" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="164" x2="340" y2="231" marker-end="url(#m-ah)"/>
+            <path class="edge flow" d="M610,164 V200 H520 V231" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="282" x2="340" y2="299" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="362" x2="340" y2="379" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="545" y1="411" x2="531" y2="411" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="442" x2="340" y2="459" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="522" x2="340" y2="539" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="590" x2="340" y2="607" marker-end="url(#m-ah)"/>
+            <path class="edge loop flow" d="M150,639 H136 V257 H149" marker-end="url(#m-aha)"/>
+            <line class="edge flow" x1="340" y1="670" x2="340" y2="711" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="774" x2="340" y2="791" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="842" x2="340" y2="859" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="910" x2="340" y2="927" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="978" x2="340" y2="995" marker-end="url(#m-ah)"/>
+            <line class="edge flow" x1="340" y1="1058" x2="340" y2="1079" marker-end="url(#m-ah)"/>
+          </g>
+          <!-- 采样循环外框 -->
+          <rect class="box-loop" x="118" y="190" width="440" height="500" rx="12"/>
+          <text class="lbl-a" x="134" y="212">采样循环 × 20 步（Heun）</text>
+          <text class="lbl" x="134" y="227">每步调用去噪器 2 次，最后一步 1 次，共 39 次</text>
+          <text class="lbl-a" x="452" y="682" text-anchor="end" id="t-val">t = 0.00</text>
+          <rect class="meter-bg" x="460" y="675" width="88" height="6" rx="3"/>
+          <rect class="meter" x="460" y="675" width="0" height="6" rx="3" id="t-meter"/>
+          <text class="lbl" x="128" y="452" transform="rotate(-90 128 452)" text-anchor="middle" dy="-2">回到 ② 再来一遍</text>
+
+          <!-- 节点 -->
+          <g class="node" data-step="0" tabindex="0" role="button" aria-label="输入：观测骨架">
+            <rect x="150" y="10" width="185" height="62" rx="8"/>
+            <text class="t1" x="164" y="32">输入：观测 10 帧</text>
+            <text class="t3" x="164" y="49">[B, 10, 2, 55, 3]</text>
+            <text class="t2" x="164" y="64">相机系 xyz（米）</text>
+          </g>
+          <g class="node" data-step="0" tabindex="-1">
+            <rect x="345" y="10" width="185" height="62" rx="8"/>
+            <text class="t1" x="359" y="32">输入：动作标签</text>
+            <text class="t3" x="359" y="49">[B]</text>
+            <text class="t2" x="359" y="64">26 类之一</text>
+          </g>
+          <g class="node" data-step="1" tabindex="0" role="button" aria-label="① 规范化">
+            <rect x="150" y="102" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="124">① 规范化</text>
+            <text class="t2" x="164" y="141">原点：两人骨盆中点；+X：A→B；+Y：上；B 转 180°</text>
+            <text class="t3" x="164" y="157">[B, 10, 2, 55, 3]  朝向对方系</text>
+          </g>
+          <g class="node side-in" data-step="1" tabindex="-1">
+            <rect x="545" y="102" width="130" height="62" rx="8"/>
+            <text class="t1" x="557" y="122">条件</text>
+            <text class="t2" x="557" y="139">动作+角色 64 维</text>
+            <text class="t2" x="557" y="155">几何 6 · 姿态 165</text>
+          </g>
+          <g class="node diff" data-step="2" tabindex="0" role="button" aria-label="状态 z">
+            <rect x="150" y="232" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="253">状态 z（DCT 系数），起点 z = 0</text>
+            <text class="t3" x="164" y="271">root [B,2,8,3] + 局部 [B,2,11,28,3]</text>
+          </g>
+          <g class="node diff" data-step="3" tabindex="0" role="button" aria-label="② 时空 token">
+            <rect x="150" y="300" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="321">② 时空 token</text>
+            <text class="t2" x="164" y="338">z 解码 50 帧 + 观测 10 帧 → 2 人 × 5 部位 × 12 块</text>
+            <text class="t3" x="164" y="354">120 个 token × 192 维（+ 上一步 x̂）</text>
+          </g>
+          <g class="node diff" data-step="4" tabindex="0" role="button" aria-label="③ STG Transformer">
+            <rect x="150" y="380" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="401">③ STG Transformer × 6</text>
+            <text class="t2" x="164" y="418">120 个 token 互相注意（4 头）+ 部位对 / 时间偏置</text>
+            <text class="t3" x="164" y="434">[B, 120, 192] → [B, 120, 192]</text>
+          </g>
+          <g class="node diff side-in" data-step="4" tabindex="-1">
+            <rect x="545" y="380" width="130" height="62" rx="8"/>
+            <text class="t1" x="557" y="400">噪声时刻 t</text>
+            <text class="t2" x="557" y="417">正弦编码 → MLP</text>
+            <text class="t2" x="557" y="433">+ 条件 → adaLN</text>
+          </g>
+          <g class="node diff" data-step="5" tabindex="0" role="button" aria-label="④ 输出头得到 x̂">
+            <rect x="150" y="460" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="481">④ 输出头 → x̂（对最终答案的估计）</text>
+            <text class="t2" x="164" y="498">每部位输出未来 10 块时域残差，最小二乘投回 DCT</text>
+            <text class="t3" x="164" y="514">x̂: root [B,2,8,3] + 局部 [B,2,11,28,3]</text>
+          </g>
+          <g class="node diff" data-step="6" tabindex="0" role="button" aria-label="腿流">
+            <rect x="150" y="540" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="561">腿流（MLP，宽 512）</text>
+            <text class="t2" x="164" y="579">个人朝向系里预测 8 个腿关节，替换主干给的腿</text>
+          </g>
+          <g class="node diff" data-step="7" tabindex="0" role="button" aria-label="Heun 更新">
+            <rect x="150" y="608" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="629">Heun 更新状态，t += 0.05</text>
+            <text class="t2" x="164" y="646">v = (x̂ − z) / (1 − t)，z ← z + Δt · v</text>
+            <text class="t2" x="164" y="662">最后一步直接取 z = x̂</text>
+          </g>
+          <g class="node" data-step="9" tabindex="0" role="button" aria-label="⑤ IDCT 乘 ramp">
+            <rect x="150" y="712" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="733">⑤ IDCT × ramp</text>
+            <text class="t2" x="164" y="750">系数 → 50 帧相对末帧的残差；ramp 0, .2, .4, .6, .8, 1…</text>
+            <text class="t3" x="164" y="766">[B, 50, 2, 29, 3]  第 1 帧残差 = 0</text>
+          </g>
+          <g class="node" data-step="10" tabindex="0" role="button" aria-label="⑥ 组装 55 关节">
+            <rect x="150" y="792" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="813">⑥ 组装 55 关节</text>
+            <text class="t2" x="164" y="831">29 个状态关节；其余 26 个手指随手腕平移</text>
+          </g>
+          <g class="node" data-step="11" tabindex="0" role="button" aria-label="⑦ 回到相机系">
+            <rect x="150" y="860" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="881">⑦ 回到相机系</text>
+            <text class="t2" x="164" y="899">pred = 观测末帧 + Rᵀ · 残差</text>
+          </g>
+          <g class="node" data-step="12" tabindex="0" role="button" aria-label="⑧ 骨架投影">
+            <rect x="150" y="928" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="949">⑧ 骨架投影</text>
+            <text class="t2" x="164" y="967">骨长 = 观测末帧；手由两个指根定旋转</text>
+          </g>
+          <g class="node diff" data-step="13" tabindex="0" role="button" aria-label="⑨ 落脚规划">
+            <rect x="150" y="996" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="1017">⑨ 落脚规划（不训练）</text>
+            <text class="t2" x="164" y="1034">着地锁脚；被带开 &gt; 0.16 m 抬脚，摆动 5–12 帧</text>
+            <text class="t2" x="164" y="1050">两骨 IK 重解膝；只改膝、踝、脚</text>
+          </g>
+          <g class="node" data-step="14" tabindex="0" role="button" aria-label="输出">
+            <rect x="150" y="1080" width="380" height="56" rx="8"/>
+            <text class="t1" x="164" y="1103">输出：预测 50 帧</text>
+            <text class="t3" x="164" y="1123">pred_xyz [B, 50, 2, 55, 3]</text>
+          </g>
+          <!-- 数据包 -->
+          <circle class="dot-ring" r="11" cx="150" cy="41" id="main-ring"/>
+          <circle class="dot" r="6" cx="150" cy="41" id="main-dot"/>
+        </svg>
+      </div>
+      <aside class="side" aria-live="polite" id="side-main">
+        <div class="count" id="main-count"></div>
+        <h3 id="main-title"></h3>
+        <p id="main-body"></p>
+        <div class="shape" id="main-shape"></div>
+        <canvas class="skel" id="cv-mini-main" aria-label="当前步骤对应的骨架动画"></canvas>
+        <div class="mini-cap" id="main-mini-cap"></div>
+      </aside>
+    </div>
+    <p class="note"><b>训练</b>：三项损失相加。① 在 t = 0、z = 0 的一次估计上施加 FD2 的完整损失配方；② 随机 t 上的 JiT 去噪损失（网络直接预测干净结果 x̂，按速度 v 计损失）；③ t 在 0.5 到 1 之间的去噪估计也施加 FD2 配方，因为采样最后一步的 x̂ 就是交付的预测。受试者留出验证集选型，10000 步 × 3 seed，权重 EMA 0.999。</p>
+  </section>
+
+  <!-- 落脚规划：脚怎么钉在地面上 -->
+  <section id="feet" aria-labelledby="h-feet">
+    <h2 id="h-feet">脚怎么钉在地面上（第 ⑨ 级落脚规划）</h2>
+    <p class="lede">模型输出 50 帧之后，落脚规划层逐帧运行：两个人的每只脚各有一个小状态机（着地、摆动、自由）。它不训练、不改网络，只重写膝、踝、脚掌三个关节；髋、骨盆和上半身原样保留。代码在 <code>utils/ntu2p_foot_planner.py</code>。</p>
+    <div class="feet">
+      <figure class="feet-fig">
+        <div class="diagram">
+          <svg viewBox="0 0 560 270" role="img" aria-label="一只脚的落脚过程：着地时踝被锁在锁定点 L，模型预测的踝随骨盆滑走；离开超过 0.16 米且另一只脚着地时抬脚，按步长划弧，落在预测位置前方 0.10 米处重新锁定。" style="min-width:460px">
+            <defs><marker id="ft-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head"/></marker></defs>
+            <text class="lbl" x="20" y="22">身体前进方向 →</text>
+            <line x1="20" y1="206" x2="545" y2="206" style="stroke: var(--muted); stroke-width: 1.2"/>
+            <text class="lbl" x="545" y="222" text-anchor="end">地面高度 h₀（观测 10 帧里踝的最低高度）</text>
+            <line x1="40" y1="200" x2="530" y2="200" style="stroke: var(--old); stroke-width: 1.4; stroke-dasharray: 2 4"/>
+            <text class="lbl" x="40" y="252" style="fill: var(--old)">虚线：模型预测的踝 â，跟着骨盆连续滑行</text>
+            <rect x="44" y="193" width="36" height="10" rx="3" style="fill: var(--accent)"/>
+            <text class="t2" x="62" y="182" text-anchor="middle">钉在 L</text>
+            <path d="M80,197 Q175,108 270,197" style="fill: none; stroke: var(--accent); stroke-width: 2"/>
+            <rect x="270" y="193" width="36" height="10" rx="3" style="fill: var(--accent)"/>
+            <text class="t2" x="288" y="182" text-anchor="middle">新的 L ← T</text>
+            <path d="M306,197 Q395,116 484,197" style="fill: none; stroke: var(--accent); stroke-width: 2; opacity: .45"/>
+            <rect x="484" y="193" width="36" height="10" rx="3" style="fill: var(--accent); opacity: .45"/>
+            <text class="lbl-a" x="150" y="116" text-anchor="middle">摆动 S 帧（5–12）</text>
+            <text class="lbl" x="150" y="132" text-anchor="middle">弧高 0.07 m</text>
+            <line x1="62" y1="228" x2="152" y2="228" class="edge" marker-end="url(#ft-ah)"/>
+            <line x1="62" y1="221" x2="62" y2="235" style="stroke: var(--muted)"/>
+            <circle cx="155" cy="200" r="3.5" style="fill: var(--old)"/>
+            <text class="t2" x="162" y="232">d &gt; 0.16 m 且另一只脚着地 → 抬脚</text>
+            <circle cx="240" cy="200" r="3.5" style="fill: var(--old)"/>
+            <line x1="240" y1="86" x2="240" y2="190" style="stroke: var(--line)"/>
+            <text class="t2" x="240" y="62" text-anchor="middle">落点 T = 落地那一帧的预测踝</text>
+            <text class="t2" x="240" y="78" text-anchor="middle">放到地面，再往前 0.10 m</text>
+          </svg>
+        </div>
+        <figcaption class="note">同一时刻每个人最多一只脚在空中，所以左右脚自然交替。</figcaption>
+      </figure>
+      <ol class="feet-steps">
+        <li><b>先定地面。</b>沿观测估计出的竖直方向，地面高度取观测 10 帧里该踝的最低高度：\( h_0=\min_{t\le 10} \mathrm{height}(a_t) \)。脚掌同理。</li>
+        <li><b>起始状态。</b>观测末帧踝高 \(-\,h_0 < 0.05\) m 的脚视为着地，锁定点 \(L\) = 末帧的踝位置，\(L_{\text{toe}}\) = 末帧的脚掌位置；否则视为自由。</li>
+        <li><b>钉住。</b>着地期间，每一帧直接把输出写成锁定点：\( a_t = L,\ \text{toe}_t = L_{\text{toe}} \)。不管模型预测的踝 \(\hat a_t\) 被骨盆带到哪里，输出的脚都不动，速度为 0。这一步就是"固定在地面上"。</li>
+        <li><b>什么时候抬脚。</b>水平漂移 \( d_t=\lVert \mathrm{flat}(\hat a_t - L)\rVert \)。同时满足 \(d_t>0.16\) m、这只脚已站稳 ≥ 5 帧、另一只脚正着地时才抬脚；两只脚同时满足时，漂得远的先走。</li>
+        <li><b>落在哪、走几帧。</b>摆动帧数按步长自适应：\( S=\mathrm{clamp}\!\big(\mathrm{round}(20\,\ell/(2.85\,v)),\,5,\,12\big) \)，\(\ell\) 是从 \(L\) 到落点的水平距离，\(v\) 是接下来 7 帧骨盆的平均水平速度（m/s），2.85 是训练集里摆动脚速度与身体速度之比。落点 \(T\) = 第 \(t+S-1\) 帧的预测踝，高度放到 \(h_0\)，再沿运动方向往前 0.10 m。</li>
+        <li><b>摆动轨迹。</b>设 \(u=k/S\)（第 \(k\) 帧），\( a=L+\mathrm{s}(u)\,(T-L)+0.07\sin(\pi u)\,\mathbf{up} \)，其中 \( \mathrm{s}(u)=3u^2-2u^3 \) 让起落都平滑。到 \(u=1\) 时落地：\(L\leftarrow T\)，重新钉住。</li>
+        <li><b>自由状态。</b>如果预测的踝本身抬到 \(h_0\) 以上 0.20 m（踢腿、跨步），规划层不干预，直接跟随预测；落回 0.05 m 以内时，在当前位置（贴到地面）重新钉住。</li>
+        <li><b>把腿接回去（两骨 IK）。</b>髋用模型的预测，大腿长 \(l_1\)、小腿长 \(l_2\) 取观测末帧。到踝的距离 \(r=\lVert a-\text{hip}\rVert\)，膝落在以 \(\text{hip}+\frac{l_1^2-l_2^2+r^2}{2r}\,\hat n\) 为圆心、半径 \(\sqrt{l_1^2-(\cdot)^2}\) 的圆上，取离模型原预测膝最近的那一点，骨长严格不变。脚掌 = 踝 + 脚长 × 指向计划脚掌的方向。如果身体离锁定点太远、腿够不着，踝沿髋→锁定点方向取最大可达位置；正常情况下漂移超过 0.16 m 时已经先迈步了。</li>
+      </ol>
+    </div>
+    <p class="note">参数全部来自训练集 GT 的步态统计（<code>scripts/diag_ntu2p_gt_gait_stats.py</code>）：离地时踝在骨盆后 0.158 m、落地时在前 0.102 m，摆动抬高 0.070 m，去抖后着地段约 5 帧。效果（验证集 3 seed）：滑行帧比 0.191 → 0.032（GT 0.034），步数 1.37 → 1.69。它不改骨盆走向，模型把方向预测错时（如 #194）修不了。</p>
+  </section>
+
+  <!-- FD2 -->
+  <section id="fd2" aria-labelledby="h-fd2">
+    <h2 id="h-fd2">原始 DCT 模型：v2 + FD2（InterMixer）</h2>
+    <div class="chips">
+      <span class="chip"><b>3.65 M</b> 参数</span>
+      <span class="chip">前向 <b>1 次</b>，直接回归</span>
+      <span class="chip">输出：root 8 阶 + 局部 <b>20 阶</b> DCT 系数</span>
+      <span class="chip">灰色虚线框 = 只有 FD2 有的部件</span>
+    </div>
+    <div class="controls" data-for="fd2">
+      <button type="button" class="d-play" aria-pressed="true">暂停</button>
+      <button type="button" class="d-prev">上一步</button>
+      <button type="button" class="d-next">下一步</button>
+      <button type="button" class="d-restart">从头播放</button>
+    </div>
+    <div class="arch">
+      <div class="diagram">
+        <svg id="svg-fd2" viewBox="0 0 680 960" role="img" aria-label="FD2 流程：输入观测与动作标签，规范化，观测位移取 30 阶 DCT 作为 30 个频率 token，经 6 个 InterMixer 块（系数轴混合、FiLM 通道 MLP、人物混合），root 头和局部头输出 DCT 系数，腿流替换腿关节，IDCT×ramp，刚体手组装 55 关节，旋回相机系，骨架投影，输出未来 50 帧。">
+          <defs>
+            <marker id="f-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="head"/></marker>
+          </defs>
+          <g class="edges">
+            <line class="edge flow" x1="242" y1="72" x2="242" y2="101" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="437" y1="72" x2="437" y2="101" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="164" x2="340" y2="195" marker-end="url(#f-ah)"/>
+            <path class="edge flow" d="M610,164 V180 H520 V195" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="258" x2="340" y2="311" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="362" x2="340" y2="373" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="424" x2="340" y2="435" marker-end="url(#f-ah)"/>
+            <path class="edge flow" d="M150,461 H142 V337 H149" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="486" x2="340" y2="527" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="545" y1="559" x2="531" y2="559" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="590" x2="340" y2="609" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="672" x2="340" y2="691" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="742" x2="340" y2="759" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="810" x2="340" y2="827" marker-end="url(#f-ah)"/>
+            <line class="edge flow" x1="340" y1="878" x2="340" y2="895" marker-end="url(#f-ah)"/>
+          </g>
+          <rect class="box-mix" x="124" y="276" width="420" height="222" rx="12"/>
+          <text class="lbl" x="140" y="298" style="font-weight:500">③ InterMixer 块 × 6（只前向一次）</text>
+          <text class="lbl" x="134" y="400" transform="rotate(-90 134 400)" text-anchor="middle" dy="-2">× 6</text>
+
+          <g class="node" data-step="0" tabindex="0" role="button" aria-label="输入：观测骨架">
+            <rect x="150" y="10" width="185" height="62" rx="8"/>
+            <text class="t1" x="164" y="32">输入：观测 10 帧</text>
+            <text class="t3" x="164" y="49">[B, 10, 2, 55, 3]</text>
+            <text class="t2" x="164" y="64">相机系 xyz（米）</text>
+          </g>
+          <g class="node" data-step="0" tabindex="-1">
+            <rect x="345" y="10" width="185" height="62" rx="8"/>
+            <text class="t1" x="359" y="32">输入：动作标签</text>
+            <text class="t3" x="359" y="49">[B]</text>
+            <text class="t2" x="359" y="64">26 类之一</text>
+          </g>
+          <g class="node" data-step="1" tabindex="0" role="button" aria-label="① 规范化">
+            <rect x="150" y="102" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="124">① 规范化</text>
+            <text class="t2" x="164" y="141">原点：两人骨盆中点；+X：A→B；+Y：上；B 转 180°</text>
+            <text class="t3" x="164" y="157">[B, 10, 2, 55, 3]  朝向对方系</text>
+          </g>
+          <g class="node side-in" data-step="1" tabindex="-1">
+            <rect x="545" y="102" width="130" height="62" rx="8"/>
+            <text class="t1" x="557" y="122">条件</text>
+            <text class="t2" x="557" y="139">动作+角色 64 维</text>
+            <text class="t2" x="557" y="155">几何 6 · 姿态 165</text>
+          </g>
+          <g class="node only" data-step="2" tabindex="0" role="button" aria-label="② 观测编码">
+            <rect x="150" y="196" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="217">② 观测编码：30 个频率 token</text>
+            <text class="t2" x="164" y="234">位移 = 每帧 − 末帧，补零到 60 帧取前 30 阶 DCT</text>
+            <text class="t3" x="164" y="250">[B, 2, 30, 256]（+ 姿态、几何、条件）</text>
+          </g>
+          <g class="node only" data-step="3" tabindex="0" role="button" aria-label="系数轴混合">
+            <rect x="150" y="312" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="333">系数轴混合</text>
+            <text class="t2" x="164" y="351">Linear(30→30)：30 个频率 token 之间交换信息</text>
+          </g>
+          <g class="node only" data-step="4" tabindex="0" role="button" aria-label="通道 MLP">
+            <rect x="150" y="374" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="395">通道 MLP（FiLM 调制）</text>
+            <text class="t2" x="164" y="413">256 → 512 → 256，动作/角色给 scale、shift</text>
+          </g>
+          <g class="node only" data-step="5" tabindex="0" role="button" aria-label="人物混合">
+            <rect x="150" y="436" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="457">人物混合</text>
+            <text class="t2" x="164" y="475">[本人; 对方] → 256，A 与 B 交换信息</text>
+          </g>
+          <g class="node only" data-step="7" tabindex="0" role="button" aria-label="④ 输出头">
+            <rect x="150" y="528" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="549">④ 输出头（零初始化）</text>
+            <text class="t2" x="164" y="566">root 头读前 8 个 token；局部头读前 20 个 token</text>
+            <text class="t3" x="164" y="582">root [B,2,8,3] · 局部 [B,2,20,78]</text>
+          </g>
+          <g class="node side-in" data-step="8" tabindex="0" role="button" aria-label="腿流">
+            <rect x="545" y="528" width="130" height="62" rx="8"/>
+            <text class="t1" x="557" y="548">腿流</text>
+            <text class="t2" x="557" y="565">MLP 宽 512</text>
+            <text class="t2" x="557" y="581">替换 8 个腿关节</text>
+          </g>
+          <g class="node" data-step="9" tabindex="0" role="button" aria-label="⑤ IDCT 乘 ramp">
+            <rect x="150" y="610" width="380" height="62" rx="8"/>
+            <text class="t1" x="164" y="631">⑤ IDCT × ramp</text>
+            <text class="t2" x="164" y="648">前 8 / 20 阶 DCT 基的未来段 → 50 帧残差</text>
+            <text class="t3" x="164" y="664">root + 24 关节 + 双手旋转，第 1 帧 = 0</text>
+          </g>
+          <g class="node" data-step="10" tabindex="0" role="button" aria-label="⑥ 组装 55 关节">
+            <rect x="150" y="692" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="713">⑥ 组装 55 关节（刚体手）</text>
+            <text class="t2" x="164" y="731">手指 = 预测手腕 + R(ω) · 末帧"手指 − 手腕"</text>
+          </g>
+          <g class="node" data-step="11" tabindex="0" role="button" aria-label="⑦ 回到相机系">
+            <rect x="150" y="760" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="781">⑦ 回到相机系</text>
+            <text class="t2" x="164" y="799">pred = 观测末帧 + Rᵀ · 残差</text>
+          </g>
+          <g class="node" data-step="12" tabindex="0" role="button" aria-label="⑧ 骨架投影">
+            <rect x="150" y="828" width="380" height="50" rx="8"/>
+            <text class="t1" x="164" y="849">⑧ 骨架投影</text>
+            <text class="t2" x="164" y="867">骨长 = 观测末帧，消除前臂、小腿伸缩</text>
+          </g>
+          <g class="node" data-step="13" tabindex="0" role="button" aria-label="输出">
+            <rect x="150" y="896" width="380" height="56" rx="8"/>
+            <text class="t1" x="164" y="919">输出：预测 50 帧（没有落脚规划）</text>
+            <text class="t3" x="164" y="939">pred_xyz [B, 50, 2, 55, 3]</text>
+          </g>
+          <circle class="dot-ring" r="11" cx="150" cy="41" id="fd2-ring"/>
+          <circle class="dot" r="6" cx="150" cy="41" id="fd2-dot"/>
+        </svg>
+      </div>
+      <aside class="side" aria-live="polite" id="side-fd2">
+        <div class="count" id="fd2-count"></div>
+        <h3 id="fd2-title"></h3>
+        <p id="fd2-body"></p>
+        <div class="shape" id="fd2-shape"></div>
+        <canvas class="skel" id="cv-mini-fd2" aria-label="当前步骤对应的骨架动画"></canvas>
+        <div class="mini-cap" id="fd2-mini-cap"></div>
+      </aside>
+    </div>
+    <p class="note"><b>训练</b>：一个确定性的损失配方：位置、局部速度、分频带（低频、中频）幅度，只算身体 25 个关节和每只手 2 个指根（FD2 去掉了占损失 81% 的 30 个手指关节），root 权重 0.1；另加脚接触损失 0.05 和腿部步态损失。10000 步 × 3 seed，权重 EMA 0.999。</p>
+  </section>
+
+  <!-- 对照 -->
+  <section id="diff" aria-labelledby="h-diff">
+    <h2 id="h-diff">两者对照</h2>
+    <div class="table">
+      <table>
+        <thead><tr><th>环节</th><th>原始 DCT 模型 FD2</th><th>扩散主线</th></tr></thead>
+        <tbody>
+          <tr><td>输入、① 规范化</td><td class="same" colspan="2">相同：观测 10 帧 + 动作标签；场景规范系、B 转 180°</td></tr>
+          <tr><td>② 编码</td><td>只编码观测：位移的 30 阶 DCT → 30 个频率 token × 256</td><td>观测 + 当前状态 z 一起编码：60 帧按 5 部位 × 12 块切成 120 个 token × 192</td></tr>
+          <tr><td>③ 主干</td><td>InterMixer × 6（线性混合 + MLP），前向 1 次</td><td>STG Transformer × 6（注意力），每个采样步调用，共 39 次</td></tr>
+          <tr><td>④ 输出</td><td>直接给出答案：root 8 阶 + 局部 20 阶 + 双手旋转</td><td>给出对答案的估计 x̂：root 8 阶 + 局部 11 阶（≤ 2 Hz）；再由 Heun 把 z 推向 x̂</td></tr>
+          <tr><td>腿流</td><td>有</td><td>有，多读一份带噪声的腿系数</td></tr>
+          <tr><td>⑤–⑧ 解码</td><td class="same" colspan="2">相同：IDCT × ramp → 组装 55 关节 → 回到相机系 → 骨架投影（手的旋转来源不同：FD2 预测轴角，扩散由两个指根求出）</td></tr>
+          <tr><td>⑨ 落脚规划</td><td>无，步行时脚贴地滑</td><td>有，不训练</td></tr>
+          <tr><td>参数</td><td>3.65 M</td><td>4.57 M</td></tr>
+          <tr><td>test mpjpe</td><td>0.18052</td><td>0.17971（<span class="up">−0.45%</span>）</td></tr>
+          <tr><td>test xyz_mse</td><td>0.02774</td><td>0.02907（<span class="down">+4.8%</span>）</td></tr>
+          <tr><td>test 滑行帧比</td><td>0.203</td><td>0.030（<span class="up">−85%</span>）</td></tr>
+          <tr><td>1.2–2 Hz 摆动</td><td>0.604</td><td>0.250（<span class="down">−59%</span>）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>结构与形状对照代码核对：<code>model/forecasting_ntu2p_intermixer.py</code>（FD2）、<code>model/forecasting_ntu2p_jitflow.py</code>（扩散）、<code>utils/ntu2p_foot_planner.py</code>；配置取自两个模型的 seed0 权重。</span>
+    <span>骨架动画是受试者留出验证集的真实样本；"状态 z"小图用 BR seed0 权重在该样本上按 ode0 重算，与导出结果最大相差约 1 mm。test 数字为原协议 3 seed 均值。</span>
+  </footer>
+</main>
+
+<script type="application/json" id="demo-data">__DEMO_DATA__</script>
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("demo-data").textContent);
+  const PARENTS = DATA.parents;
+  const OBS = 10, PRED = 50, TOTAL = OBS + PRED, FPS = DATA.fps;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ACTION_ZH = { "pushing": "推人", "walking apart": "走开" };
+  let caseIdx = 0, speed = 1;
+
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  // 斜投影：规范系 X（A→B）向右、Y 向上，深度 Z 稍微错开，左右肢体不重叠。
+  const proj = (p) => [p[0] + 0.3 * p[2], p[1] + 0.12 * p[2]];
+
+  function boundsFor(c) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const seqs = [c.obs, c.gt, c.fd2, c.main].concat(c.states);
+    for (const seq of seqs) for (const fr of seq) for (const person of fr) for (const j of person) {
+      const [x, y] = proj(j);
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return { x0, x1, y0, y1 };
+  }
+  const BOUNDS = DATA.cases.map(boundsFor);
+
+  function fitCanvas(cv) {
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    return { w, h, dpr };
+  }
+
+  // 画一帧：frames 为 [2][22][3] 毫米；ghost 为灰色对照（可空）。
+  function drawFrame(cv, frame, ghost, tag) {
+    const { w, h, dpr } = fitCanvas(cv);
+    const ctx = cv.getContext("2d");
+    const b = BOUNDS[caseIdx];
+    const pad = 14 * dpr;
+    const s = Math.min((w - 2 * pad) / (b.x1 - b.x0), (h - 2 * pad - 14 * dpr) / (b.y1 - b.y0));
+    const ox = (w - s * (b.x1 + b.x0)) / 2;
+    const oy = h - pad - 4 * dpr + s * b.y0;
+    const P = (p) => { const [x, y] = proj(p); return [ox + s * x, oy - s * y]; };
+    ctx.fillStyle = css("--panel");
+    ctx.fillRect(0, 0, w, h);
+    // 地面
+    ctx.strokeStyle = css("--line");
+    ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(pad, oy - s * b.y0 + 2 * dpr); ctx.lineTo(w - pad, oy - s * b.y0 + 2 * dpr); ctx.stroke();
+    const bones = (person, color, width) => {
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+      ctx.beginPath();
+      for (let j = 1; j < person.length; j++) {
+        const a = P(person[j]), q = P(person[PARENTS[j]]);
+        ctx.moveTo(a[0], a[1]); ctx.lineTo(q[0], q[1]);
+      }
+      ctx.stroke();
+      const head = P(person[15]);
+      ctx.beginPath(); ctx.arc(head[0], head[1], 3.2 * dpr, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+    };
+    if (ghost) for (const person of ghost) bones(person, css("--ghost"), 1.2 * dpr);
+    bones(frame[0], css("--person-a"), 2.2 * dpr);
+    bones(frame[1], css("--person-b"), 2.2 * dpr);
+    if (tag) {
+      ctx.font = 500 * 1 + " " + 11 * dpr + "px " + css("--font-body");
+      ctx.fillStyle = tag === "输入" ? css("--accent") : css("--muted");
+      ctx.fillText(tag, pad, pad + 4 * dpr);
+    }
+  }
+
+  // ---------- 输入与输出 ----------
+  const cvGT = document.getElementById("cv-gt"), cvFD2 = document.getElementById("cv-fd2"), cvMain = document.getElementById("cv-main");
+  const ioPlay = document.getElementById("io-play"), ioSlow = document.getElementById("io-slow");
+  const scrub = document.getElementById("scrub"), scrubHead = document.getElementById("scrub-head"), ioTime = document.getElementById("io-time");
+  let ioFrame = 0, ioPlaying = !reduce, ioAcc = 0;
+
+  function caseLabel() {
+    const c = DATA.cases[caseIdx];
+    document.getElementById("err-fd2").textContent = "mpjpe " + c.mpjpe.fd2.toFixed(3);
+    document.getElementById("err-main").textContent = "mpjpe " + c.mpjpe.main.toFixed(3);
+    document.getElementById("action-dd").textContent =
+      "这段动作的类别编号，26 类双人动作之一。当前样本：" + (ACTION_ZH[c.action] || c.action) + "（" + c.action + "）= " + c.action_id + "。";
+  }
+  function seqFrame(c, key, f) { return f < OBS ? c.obs[f] : c[key][f - OBS]; }
+  function drawIO() {
+    const c = DATA.cases[caseIdx];
+    const f = ioFrame, isObs = f < OBS;
+    const tag = isObs ? "输入" : "预测";
+    drawFrame(cvGT, seqFrame(c, "gt", f), null, isObs ? "输入" : "真实");
+    drawFrame(cvFD2, seqFrame(c, "fd2", f), isObs ? null : c.gt[f - OBS], tag);
+    drawFrame(cvMain, seqFrame(c, "main", f), isObs ? null : c.gt[f - OBS], tag);
+    scrubHead.style.left = (100 * (f + 0.5) / TOTAL) + "%";
+    scrub.setAttribute("aria-valuenow", String(f + 1));
+    ioTime.textContent = "第 " + (f + 1) + " 帧 / 60 · " + (f / FPS).toFixed(2) + " s · " + (isObs ? "输入（观测）" : "输出（预测第 " + (f - OBS + 1) + " 帧）");
+  }
+  ioPlay.addEventListener("click", () => {
+    ioPlaying = !ioPlaying;
+    ioPlay.textContent = ioPlaying ? "暂停" : "播放";
+    ioPlay.setAttribute("aria-pressed", String(ioPlaying));
+  });
+  ioPlay.textContent = ioPlaying ? "暂停" : "播放";
+  ioPlay.setAttribute("aria-pressed", String(ioPlaying));
+  ioSlow.addEventListener("click", () => {
+    speed = speed === 1 ? 0.5 : 1;
+    ioSlow.setAttribute("aria-pressed", String(speed !== 1));
+  });
+  document.querySelectorAll(".case-btn").forEach((btn) => btn.addEventListener("click", () => {
+    caseIdx = Number(btn.dataset.case);
+    document.querySelectorAll(".case-btn").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+    caseLabel(); drawIO(); main.redraw(); fd2.redraw();
+  }));
+  function scrubTo(clientX) {
+    const r = scrub.getBoundingClientRect();
+    ioFrame = Math.max(0, Math.min(TOTAL - 1, Math.floor((clientX - r.left) / r.width * TOTAL)));
+    drawIO();
+  }
+  scrub.addEventListener("pointerdown", (e) => {
+    scrub.setPointerCapture(e.pointerId); scrubTo(e.clientX);
+    const move = (ev) => scrubTo(ev.clientX);
+    const up = () => { scrub.removeEventListener("pointermove", move); scrub.removeEventListener("pointerup", up); };
+    scrub.addEventListener("pointermove", move); scrub.addEventListener("pointerup", up);
+  });
+  scrub.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") { ioFrame = Math.min(TOTAL - 1, ioFrame + 1); drawIO(); e.preventDefault(); }
+    if (e.key === "ArrowLeft") { ioFrame = Math.max(0, ioFrame - 1); drawIO(); e.preventDefault(); }
+  });
+
+  // ---------- 流程图 ----------
+  // view：obs（只播输入）、state:k（采样状态 k）、loop（随 t 切换状态）、final、main、fd2。
+  const MAIN_STEPS = [
+    { t: "输入", b: "两样东西：观测到的 10 帧双人骨架（0.5 秒），以及这段动作的类别标签。骨架是相机坐标系下 55 个关节的 xyz 坐标，单位米。", s: "obs_xyz [B,10,2,55,3] · action [B]", at: [150, 41], view: "obs" },
+    { t: "① 规范化", b: "把场景转到标准朝向：原点放在两人骨盆连线的中点，+X 指向 A→B，+Y 向上；B 再绕竖直轴转 180°，这样“走向对方”对两个人都是 +X。同时准备条件：动作和角色嵌入（64 维）、两人相对几何（6 维）、末帧姿态（165 维）、腿部运动特征。变换只用观测求出，最后能精确还原。", s: "[B,10,2,55,3]（朝向对方系）", at: [150, 133], view: "obs" },
+    { t: "状态 z", b: "扩散要生成的不是 xyz，而是“未来 50 帧相对观测末帧的残差”在 DCT 基上的系数：骨盆轨迹 8 阶，28 个关节的局部运动 11 阶。主线用 ode0 读出，起点 z = 0。z = 0 解码出来就是两个人保持观测末帧不动（下面的小图）。", s: "root [B,2,8,3] · 局部 [B,2,11,28,3]", at: [150, 257], view: "state:0" },
+    { t: "② 时空 token", b: "把 z 解码成 50 帧，接在 10 帧观测后面，得到 60 帧。每个人按 5 个部位（躯干和头、左臂、右臂、左腿、右腿）、每 5 帧一块，切成 2 × 5 × 12 = 120 个 token，经 128 维瓶颈投到 192 维。未来块还拼上上一步的估计 x̂（自条件），再加部位、时间块、角色、观测/未来标记和末帧姿态、相对几何的嵌入。", s: "120 个 token：[B,120,192]", at: [150, 331], view: "state:0" },
+    { t: "③ STG Transformer × 6", b: "120 个 token 两两做注意力（4 头，q、k 先归一化）。注意力分数加两种可学习偏置：是哪两个部位（同一人、跨人分开学），相隔多少个时间块。每一块用 adaLN-Zero 把条件调制进来：动作 + 角色 + 噪声时刻 t。前馈层是 SwiGLU。", s: "[B,120,192] → [B,120,192]", at: [150, 411], view: "state:0" },
+    { t: "④ 输出头 → x̂", b: "每个部位一个线性头，只读未来 10 个时间块，输出 50 帧时域残差，再用最小二乘投回正交化的 ramp-DCT 基，得到对最终答案的估计 x̂。这是 x 预测：网络直接猜干净的结果，而不是猜噪声。", s: "x̂：root [B,2,8,3] · 局部 [B,2,11,28,3]", at: [150, 491], view: "state:0" },
+    { t: "腿流", b: "腿单独一条 MLP（宽 512），在每个人自己的朝向系里，读观测腿的位置和速度、骨盆轨迹、主干的骨盆估计和带噪声的腿系数，输出 8 个腿关节（髋、膝、踝、脚）的系数，替换主干给的腿，让迈步时机和身体前进速度挂钩。", s: "腿：[B,2,11,8,3]", at: [150, 565], view: "state:0" },
+    { t: "Heun 更新", b: "由 x̂ 算出前进方向 v = (x̂ − z)/(1 − t)，把 z 往 x̂ 推一小步；Heun 法在新位置再调用一次去噪器，两个方向取平均。t 每步加 0.05。", s: "z ← z + Δt · (v₁ + v₂) / 2", at: [150, 639], view: "state:0" },
+    { t: "再循环 19 次", b: "同样的 ②③④、腿流和 Heun 更新再做 19 次，t 从 0.05 走到 1；最后一步直接取 z = x̂。去噪器一共调用 39 次。下面的小图是当前 t 的状态 z 解码出来的动作：从原地不动开始，动作一点点长出来。", s: "t：0 → 1，共 39 次前向", at: [150, 639], view: "loop", loop: true },
+    { t: "⑤ IDCT × ramp", b: "系数乘回 DCT 基，得到 50 帧相对观测末帧的残差；再乘 ramp（0, 0.2, 0.4, 0.6, 0.8, 1, 1, …），第 1 帧残差严格为 0，预测从观测末帧平滑接上。只用 11 阶，2 Hz 以上的骨架拟合抖动被滤掉。", s: "[B,50,2,29,3]", at: [150, 743], view: "final" },
+    { t: "⑥ 组装 55 关节", b: "状态里有 29 个关节：骨盆、身体 24 个、每只手 2 个指根。其余 26 个手指先跟着本手手腕平移。", s: "[B,50,2,55,3]", at: [150, 817], view: "final" },
+    { t: "⑦ 回到相机系", b: "残差旋回相机坐标系，加上观测末帧：pred = 末帧 + Rᵀ · 残差。", s: "[B,50,2,55,3]（相机系）", at: [150, 885], view: "final" },
+    { t: "⑧ 骨架投影", b: "把每根骨头的长度固定为观测末帧的长度，手当刚体，由两个指根和手腕定出旋转。这样前臂、小腿不会忽长忽短。", s: "骨长恒定", at: [150, 953], view: "final" },
+    { t: "⑨ 落脚规划", b: "不训练。每只脚着地时钉住；被身体带开超过 0.16 m、且另一只脚着地时抬脚，按步长划 5–12 帧的弧，落到预测位置前方 0.10 m；两骨 IK 重解膝。只改膝、踝、脚，上半身不变。参数全部来自训练集的步态统计。细节见下方“脚怎么钉在地面上”。", s: "只改双腿的膝、踝、脚", at: [150, 1027], view: "main" },
+    { t: "输出", b: "未来 50 帧（2.5 秒）两个人 55 个关节的 xyz，坐标系与输入相同。", s: "pred_xyz [B,50,2,55,3]", at: [150, 1108], view: "main" },
+  ];
+  const FD2_STEPS = [
+    { t: "输入", b: "与扩散模型完全相同：观测 10 帧双人骨架 + 动作标签。", s: "obs_xyz [B,10,2,55,3] · action [B]", at: [150, 41], view: "obs" },
+    { t: "① 规范化", b: "与扩散模型完全相同：两人骨盆中点为原点，+X 指向 A→B，+Y 向上，B 转 180°；准备动作/角色嵌入、相对几何、末帧姿态。", s: "[B,10,2,55,3]（朝向对方系）", at: [150, 133], view: "obs" },
+    { t: "② 观测编码", b: "每帧减去观测末帧得到位移，补零到 60 帧后取前 30 阶 DCT 系数，每个人得到 30 个“频率 token”（第 k 个 token 对应第 k 个频率），投到 256 维。末帧姿态、相对几何、动作和角色投影后加到每个 token 上。注意这里只编码观测，模型从没“看到”未来的任何草稿。", s: "[B,2,30,256]", at: [150, 227], view: "obs" },
+    { t: "③ 系数轴混合", b: "Linear(30→30) 在同一个人的 30 个频率 token 之间混合，相当于对整段时间做一次可学习的线性变换。", s: "[B,2,30,256]", at: [150, 337], view: "obs" },
+    { t: "③ 通道 MLP", b: "每个 token 自己过 256 → 512 → 256 的 MLP，动作和角色通过 FiLM 给出 scale 和 shift 来调制。", s: "[B,2,30,256]", at: [150, 399], view: "obs" },
+    { t: "③ 人物混合", b: "把本人和对方的 token 拼起来 [本人; 对方]，投回 256 维，A 和 B 在这里交换信息。零初始化，训练初期先学单人运动。", s: "[B,2,30,512] → [B,2,30,256]", at: [150, 461], view: "obs" },
+    { t: "× 6 块", b: "上面三步合成一个块，堆 6 块。整个模型只前向这一次，没有循环。", s: "6 个 InterMixer 块", at: [150, 337], view: "obs", path: [[150, 461], [142, 461], [142, 337], [150, 337]] },
+    { t: "④ 输出头", b: "root 头读前 8 个 token，给出骨盆轨迹的 8 阶系数；局部头读前 20 个 token，给出 24 个身体关节相对骨盆的 20 阶系数，外加两只手各一个旋转（轴角）。全部零初始化，训练开始时输出等于“保持末帧不动”。", s: "root [B,2,8,3] · 局部 [B,2,20,78]", at: [150, 559], view: "fd2", path: [[150, 337], [150, 559]] },
+    { t: "腿流", b: "腿单独一条 MLP（宽 512），在个人朝向系里读观测腿部运动和主干的骨盆预测，输出 8 个腿关节的 20 阶系数，替换主干给的腿。", s: "腿：[B,2,20,8,3]", at: [545, 559], view: "fd2" },
+    { t: "⑤ IDCT × ramp", b: "前 8 / 20 阶 DCT 基的未来段乘回系数，得到 50 帧残差，再乘 ramp，第 1 帧残差为 0。", s: "root + 24 关节 + 双手旋转", at: [150, 641], view: "fd2" },
+    { t: "⑥ 组装 55 关节（刚体手）", b: "骨盆只随 root 平移；手指 = 预测手腕 + R(ω) · 观测末帧的“手指 − 手腕”偏移，整只手当刚体转动。", s: "[B,50,2,55,3]", at: [150, 717], view: "fd2" },
+    { t: "⑦ 回到相机系", b: "残差旋回相机坐标系，加上观测末帧。", s: "[B,50,2,55,3]（相机系）", at: [150, 785], view: "fd2" },
+    { t: "⑧ 骨架投影", b: "骨长固定为观测末帧的长度。", s: "骨长恒定", at: [150, 853], view: "fd2" },
+    { t: "输出", b: "未来 50 帧的双人 55 关节 xyz。没有落脚规划，步行时脚会贴着地面跟着身体滑（对比上方“走开”样本）。", s: "pred_xyz [B,50,2,55,3]", at: [150, 924], view: "fd2" },
+  ];
+  // 采样循环中一圈的路径：沿主列向下，再沿左侧回流线回到状态 z。
+  const LAP = [[150, 639], [136, 639], [136, 257], [150, 257], [150, 331], [150, 411], [150, 491], [150, 565], [150, 639]];
+
+  function polyLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return L; }
+  function polyAt(pts, u) {
+    const L = polyLen(pts) * u; let acc = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      if (acc + d >= L) { const k = d ? (L - acc) / d : 0; return [pts[i - 1][0] + k * (pts[i][0] - pts[i - 1][0]), pts[i - 1][1] + k * (pts[i][1] - pts[i - 1][1])]; }
+      acc += d;
+    }
+    return pts[pts.length - 1];
+  }
+  const ease = (u) => u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+
+  function Diagram(key, steps) {
+    const svg = document.getElementById("svg-" + key);
+    const dot = document.getElementById(key + "-dot"), ring = document.getElementById(key + "-ring");
+    const cv = document.getElementById("cv-mini-" + key);
+    const el = (id) => document.getElementById(key + "-" + id);
+    const tVal = key === "main" ? document.getElementById("t-val") : null;
+    const tMeter = key === "main" ? document.getElementById("t-meter") : null;
+    const controls = document.querySelector('.controls[data-for="' + key + '"]');
+    const playBtn = controls.querySelector(".d-play");
+    let idx = 0, from = steps[0].at, elapsed = 0, playing = !reduce, visible = false, tNow = 0, miniFrame = 0, miniAcc = 0;
+    const STEP_MS = 3200, MOVE_MS = 700, LOOP_MS = 9000, END_MS = 2500;
+
+    function setNodes() {
+      svg.querySelectorAll(".node").forEach((n) => {
+        const s = Number(n.dataset.step);
+        n.classList.toggle("on", s === idx);
+        n.classList.toggle("done", s < idx);
+      });
+    }
+    function setT(t) {
+      tNow = t;
+      if (tVal) { tVal.textContent = "t = " + t.toFixed(2); tMeter.setAttribute("width", String(88 * t)); }
+    }
+    function stateIndex() {
+      const ts = DATA.cases[caseIdx].state_t;
+      let k = 0; for (let i = 0; i < ts.length; i++) if (tNow >= ts[i] - 1e-6) k = i;
+      return k;
+    }
+    function render() {
+      const st = steps[idx];
+      el("count").textContent = "第 " + (idx + 1) + " / " + steps.length + " 步";
+      el("title").textContent = st.t;
+      el("body").textContent = st.b;
+      el("shape").textContent = st.s;
+      setNodes();
+    }
+    function go(i, animate) {
+      const prev = steps[idx].at;
+      idx = (i + steps.length) % steps.length;
+      from = animate ? prev : steps[idx].at;
+      elapsed = animate ? 0 : MOVE_MS;
+      if (key === "main") setT(idx > 8 ? 1 : 0);
+      if (steps[idx].loop) elapsed = 0;
+      if (!animate) placeDot(steps[idx].at);
+      render();
+      miniFrame = 0;
+    }
+    function placeDot(p) {
+      dot.setAttribute("cx", p[0]); dot.setAttribute("cy", p[1]);
+      ring.setAttribute("cx", p[0]); ring.setAttribute("cy", p[1]);
+    }
+    function miniSeq() {
+      const c = DATA.cases[caseIdx];
+      const v = steps[idx].view;
+      if (v === "obs") return { seq: null, cap: "输入：观测的 10 帧" };
+      if (v === "fd2") return { seq: c.fd2, cap: "FD2 的输出（灰色为真实动作）" };
+      if (v === "main") return { seq: c.main, cap: "主线最终输出：加了落脚规划（灰色为真实动作）" };
+      const k = v === "final" ? c.states.length - 1 : (v === "loop" ? stateIndex() : Number(v.split(":")[1]));
+      const t = c.state_t[k];
+      let cap = "状态 z 解码出的动作，t = " + t.toFixed(2);
+      if (k === 0) cap += "：z = 0，两人保持观测末帧不动";
+      else if (k === c.states.length - 1) cap += "：z = x̂，确定性预测（还没加落脚规划）";
+      else cap += "：动作逐渐出现";
+      return { seq: c.states[k], cap };
+    }
+    function drawMini() {
+      const c = DATA.cases[caseIdx];
+      const { seq, cap } = miniSeq();
+      el("mini-cap").textContent = cap;
+      if (!seq) { drawFrame(cv, c.obs[miniFrame % OBS], null, "输入"); return; }
+      const f = miniFrame % TOTAL;
+      if (f < OBS) drawFrame(cv, c.obs[f], null, "输入");
+      else drawFrame(cv, seq[f - OBS], (steps[idx].view === "main" || steps[idx].view === "fd2") ? c.gt[f - OBS] : null, "预测");
+    }
+    function tick(dt) {
+      // 小图一直按 20 fps 播放（暂停时也播，便于看清当前状态）。
+      if (!reduce) {
+        miniAcc += dt * speed;
+        while (miniAcc >= 1000 / FPS) { miniAcc -= 1000 / FPS; miniFrame++; }
+      }
+      if (playing && visible) {
+        elapsed += dt;
+        const st = steps[idx];
+        if (st.loop) {
+          const u = Math.min(1, elapsed / LOOP_MS);
+          const laps = 19, lapU = (u * laps) % 1;
+          placeDot(u >= 1 ? st.at : polyAt(LAP, lapU));
+          setT(Math.min(1, 0.05 + 0.95 * u));
+          if (elapsed >= LOOP_MS + 900) go(idx + 1, true);
+        } else {
+          const path = st.path || [from, st.at];
+          const u = Math.min(1, elapsed / MOVE_MS);
+          placeDot(polyAt(path, ease(u)));
+          const hold = idx === steps.length - 1 ? STEP_MS + END_MS : STEP_MS;
+          if (elapsed >= hold) go(idx + 1, idx + 1 < steps.length);
+        }
+      }
+      drawMini();
+    }
+    playBtn.addEventListener("click", () => {
+      playing = !playing;
+      playBtn.textContent = playing ? "暂停" : "播放";
+      playBtn.setAttribute("aria-pressed", String(playing));
+    });
+    playBtn.textContent = playing ? "暂停" : "播放";
+    playBtn.setAttribute("aria-pressed", String(playing));
+    controls.querySelector(".d-next").addEventListener("click", () => go(idx + 1, !reduce));
+    controls.querySelector(".d-prev").addEventListener("click", () => go(idx - 1, false));
+    controls.querySelector(".d-restart").addEventListener("click", () => { go(0, false); if (!playing) playBtn.click(); });
+    svg.querySelectorAll(".node").forEach((n) => {
+      const jump = () => go(Number(n.dataset.step), false);
+      n.addEventListener("click", jump);
+      n.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); jump(); } });
+    });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; }, { threshold: 0.15 }).observe(svg);
+    } else { visible = true; }
+    go(0, false);
+    return { tick, redraw: drawMini };
+  }
+
+  const main = Diagram("main", MAIN_STEPS);
+  const fd2 = Diagram("fd2", FD2_STEPS);
+  caseLabel();
+  drawIO();
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(100, now - last); last = now;
+    if (ioPlaying) {
+      ioAcc += dt * speed;
+      let moved = false;
+      while (ioAcc >= 1000 / FPS) { ioAcc -= 1000 / FPS; ioFrame = (ioFrame + 1) % TOTAL; moved = true; }
+      if (moved) drawIO();
+    }
+    main.tick(dt); fd2.tick(dt);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  window.addEventListener("resize", () => { drawIO(); main.redraw(); fd2.redraw(); });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { drawIO(); main.redraw(); fd2.redraw(); });
+})();
+</script>

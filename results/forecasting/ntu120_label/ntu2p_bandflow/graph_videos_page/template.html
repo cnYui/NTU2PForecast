@@ -1,0 +1,210 @@
+<title>图结构各版本视频对照</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* 版式：单栏放映室。顶部是版本说明与总分表，下面每个案例一张"片单卡"：两段同步视频（A 行：原始/主线/细分；B 行：其他图版本），
+     卡片头部用一排数字条显示该例各版本误差。颜色：青绿 = 本页主角 F13，琥珀 = 主线 BR，灰 = 其他。 */
+  :root {
+    --bg: #F2F4F7;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --hero: #0E7C74;
+    --hero-tint: #E2F3F1;
+    --main: #B26A00;
+    --main-tint: #FBF0DF;
+    --good: #1F7A3A;
+    --bad: #B4381F;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --hero: #3CC7B8; --hero-tint: #12302E; --main: #F2B24C; --main-tint: #33280F; --good: #5CC27A; --bad: #F08A6E; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --hero: #3CC7B8; --hero-tint: #12302E; --main: #F2B24C; --main-tint: #33280F; --good: #5CC27A; --bad: #F08A6E; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.75; }
+  .page {
+    max-width: 1180px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 48px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); }
+  h2 { font-size: var(--step-2); }
+  h3 { font-size: var(--step-1); }
+  p { margin: 0; max-width: 72ch; }
+  section { display: grid; gap: 16px; min-width: 0; }
+  code { font-family: var(--font-mono); font-size: 0.86em; }
+  a { color: var(--hero); }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .lede { color: var(--muted); }
+  .note { font-size: var(--step--1); color: var(--muted); max-width: 86ch; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+
+  .versions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 860px) { .versions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .versions { grid-template-columns: minmax(0, 1fr); } }
+  .ver { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px 12px; display: grid; gap: 2px; }
+  .ver b { font-size: var(--step-0); }
+  .ver span { font-size: var(--step--1); color: var(--muted); }
+  .ver.hero { border-color: var(--hero); background: var(--hero-tint); }
+  .ver.main { border-color: var(--main); background: var(--main-tint); }
+
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.hero td { background: var(--hero-tint); }
+  tr.main td { background: var(--main-tint); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button { font: inherit; font-size: var(--step--1); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+  button:hover { border-color: var(--hero); }
+  button[aria-pressed="true"] { border-color: var(--hero); color: var(--hero); background: var(--hero-tint); }
+  button:focus-visible, video:focus-visible { outline: 2px solid var(--hero); outline-offset: 2px; }
+
+  .case { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+  .case-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+  .case-head h3 span { font-size: var(--step--1); color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .errs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .err { font-size: 0.75rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .err.best { border-color: var(--good); color: var(--good); font-weight: 700; }
+  .err.hero { box-shadow: inset 0 -2px 0 var(--hero); }
+  .vrow { display: grid; gap: 4px; }
+  .vrow .lab { font-size: var(--step--1); color: var(--muted); }
+  .vrow video { width: 100%; height: auto; aspect-ratio: 4 / 1; max-width: 100%; display: block; border-radius: 8px; border: 1px solid var(--line); background: #FFFFFF; }
+  .case p.obs { font-size: var(--step--1); max-width: 100ch; }
+  footer { font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+</style>
+
+<main class="page">
+  <header style="display:grid; gap:12px">
+    <div class="eyebrow">NTU120 双人动作预测 · 受试者留出验证集 · seed0 · 10000 步</div>
+    <h1>图结构各版本视频对照</h1>
+    <p class="lede">同一批 6 个验证案例，6 个版本并排看。主角是 <b>F13：把每个人从 5 个部位细分成 13 个关节组</b>，其余与主线完全相同。每个案例两段视频同步播放：上面一段是 GT | 原始 DCT 模型 FD2 | 主线 BR | F13，下面一段是 GT | G1 | SK | XL。灰色细线是真实动作，地面上的点是脚踝轨迹。</p>
+  </header>
+
+  <section aria-labelledby="h-ver">
+    <h2 id="h-ver">六个版本</h2>
+    <div class="versions">
+      <div class="ver"><b>FD2 · 原始 DCT 模型</b><span>一次前向直接回归，不加落脚规划，所以走路时脚会贴地滑。</span></div>
+      <div class="ver main"><b>BR · 主线</b><span>扩散 + 时空图注意力（每人 5 个部位）+ 落脚规划。</span></div>
+      <div class="ver hero"><b>F13 · 只细分部位</b><span>BR 的每人 5 个部位 → 13 个关节组，其余不变。seed1/2 验证训练中。</span></div>
+      <div class="ver"><b>G1 · 关节级交互图</b><span>13 组 + 按距离加权的跨人边 + 跨人因果。</span></div>
+      <div class="ver"><b>SK · 骨架邻接图</b><span>5 个部位，只允许骨架相连的部位互相看（GCN 式）。</span></div>
+      <div class="ver"><b>XL · 跨人腿部注意力</b><span>BR 的腿流后加两人双腿互相注意的小 Transformer。</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-score">
+    <h2 id="h-score">总体分数（247 个验证窗口）</h2>
+    <div class="table"><table id="t-score">
+      <thead><tr><th>版本</th><th>mpjpe</th><th>xyz_mse</th><th>接触前超额后退</th><th>漏接触</th><th>滑行帧比</th><th>步数</th><th>左右脚交替相关</th><th>jerk</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="note">mpjpe、mse、超额后退、漏接触、滑行、jerk 越低越好；步数、交替相关越高越好（GT 步数约 2.3）。都是单个 seed，mpjpe 的随机波动约 0.8%。F13 的 mpjpe 比 BR 低 0.92%，刚过 0.8% 的门槛，但漏接触多了 8 次、交替相关从 0.68 降到 0.50；它的 seed1、seed2 正在训练，结论要等补完。G1 这一行的 −2.23% 也只是 seed0：补了 seed1、seed2 后均值反而 +0.60%，已判为噪声。</p>
+  </section>
+
+  <section aria-labelledby="h-cases">
+    <h2 id="h-cases">逐例对照</h2>
+    <div class="controls">
+      <button type="button" id="play-all">全部播放</button>
+      <button type="button" id="slow" aria-pressed="false">0.5 倍速</button>
+      <span class="note">视频本身已是半速（10 fps）；每张卡片里两段视频同步播放。</span>
+    </div>
+    <div id="cases" style="display:grid; gap:20px"></div>
+  </section>
+
+  <footer>
+    <span>视频由 <code>scripts/render_ntu2p_compare_video.py</code> 渲染（规范坐标系侧视、半速）。数据：FD2 来自 <code>compare_page/arrays_planner.pt</code>，其余来自 <code>subjval/{jointgraph,partgraph,legx}_s0/*_ode0plan_arrays.pt</code>；已核对 6 个版本的窗口顺序和 GT 逐位相同。</span>
+    <span>相关页面：<a href="https://claude.ai/artifact/8zAwDp7tnVTZRG6Q8jfrhz">NTU2P 图结构实验汇总</a></span>
+  </footer>
+</main>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+(function () {
+  "use strict";
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const ORDER = ["FD2", "BR", "F13", "G1", "SK", "XL"];
+  const CASES = [
+    { idx: "28", file: "case_028_S005C001P004R002A003", title: "#028 推人", note: "BR 的 B 从约 1.5 s 起平滑后仰、后退幅度偏小。F13、SK、XL 这一例误差都更低，B 后退的位置更接近 GT；XL 结尾 B 的后腿拉成大弓步。各版本都在 A 的手到达之前就开始后退。" },
+    { idx: "2", file: "case_002_S001C001P004R001A003", title: "#002 推人", note: "这一例主线 BR 最好（0.140）。F13 0.151、SK 0.158 略差，动作形态与 BR 接近。" },
+    { idx: "194", file: "case_194_S026C001P074R001A022", title: "#194 跟随", note: "GT 里 B 向右走开、A 跟上。所有扩散版本都让 B 基本留在原地，A 走进 B 的位置；F13 和 XL 更糟，B 在 1.7 s 后反向朝 A 移动、结尾两人重叠交叉。FD2 误差最低，但也没有让 B 走开。" },
+    { idx: "10", file: "case_010_S001C001P004R001A011", title: "#010 走开", note: "FD2 误差最低（0.131），但脚贴地滑行；加了落脚规划的版本都能交替迈步。F13 的 A 在 1.7–2.1 s 有一次很大的单腿前跨，B 站姿偏宽，和交替相关下降一致。" },
+    { idx: "98", file: "case_098_S012C001P027R001A006", title: "#098 拥抱", note: "所有扩散版本里 A 的两腿都分得偏开，F13 在 2.3 s 时 A 的后腿伸得很远；FD2 站姿最直。误差上 G1、XL、FD2、F13 接近（0.287–0.292），BR 0.310。" },
+    { idx: "216", file: "case_216_S029C001P049R002A020", title: "#216 一起搬东西", note: "F13（0.160）明显比 BR（0.181）接近 GT：BR 和 SK 的 B 出现很宽的弓步站姿，SK 的 A 还向后仰（0.216，最差）；F13、XL 的站姿正常。FD2 仍然最低（0.152）。" },
+  ];
+  const LABELS = { FD2: "FD2", BR: "BR 主线", F13: "F13 细分", G1: "G1", SK: "SK", XL: "XL" };
+
+  // 总分表
+  const tb = document.querySelector("#t-score tbody");
+  const f = (v, d) => v.toFixed(d);
+  for (const m of ORDER) {
+    const r = D.rows[m];
+    const tr = document.createElement("tr");
+    if (m === "F13") tr.className = "hero"; else if (m === "BR") tr.className = "main";
+    const dm = m === "BR" ? "" : ' <span class="' + (r.mpjpe < D.rows.BR.mpjpe ? "good" : "bad") + '">(' + (r.mpjpe > D.rows.BR.mpjpe ? "+" : "") + (100 * (r.mpjpe / D.rows.BR.mpjpe - 1)).toFixed(2) + "%)</span>";
+    tr.innerHTML = "<td>" + LABELS[m] + (m === "FD2" ? "（无规划）" : "") + "</td><td>" + f(r.mpjpe, 4) + dm + "</td><td>" + f(r.xyz_mse, 4) + "</td><td>" + f(r.primary_excess_antic, 4) + "</td><td>" + f(r.missed_contact_total, 0) +
+      "</td><td>" + f(r.slide_frame_ratio, 3) + "</td><td>" + f(r.step_count, 2) + "</td><td>" + f(r.gait_sep_corr_f01_10, 2) + "</td><td>" + f(r.jerk_body, 1) + "</td>";
+    tb.appendChild(tr);
+  }
+
+  // 案例卡片
+  const host = document.getElementById("cases");
+  const groups = [];
+  for (const c of CASES) {
+    const err = D.case_mpjpe[c.idx];
+    const best = ORDER.reduce((a, b) => (err[b] < err[a] ? b : a));
+    const chips = ORDER.map((m) => '<span class="err' + (m === best ? " best" : "") + (m === "F13" ? " hero" : "") + '">' + LABELS[m] + " " + err[m].toFixed(3) + "</span>").join("");
+    const card = document.createElement("article");
+    card.className = "case";
+    card.innerHTML =
+      '<div class="case-head"><h3>' + c.title + "<span>各版本该例 mpjpe（绿色为最低）</span></h3><div class=\"errs\">" + chips + "</div></div>" +
+      '<div class="vrow"><span class="lab">GT | FD2 原始 DCT | BR 主线 | F13 细分 13 组</span><video muted loop playsinline preload="metadata" controls poster="videos_a/' + c.file + '.jpg" src="videos_a/' + c.file + '.mp4" aria-label="' + c.title + '：GT、FD2、BR、F13"></video></div>' +
+      '<div class="vrow"><span class="lab">GT | G1 关节级交互图 | SK 骨架邻接图 | XL 跨人腿部</span><video muted loop playsinline preload="metadata" controls poster="videos_b/' + c.file + '.jpg" src="videos_b/' + c.file + '.mp4" aria-label="' + c.title + '：GT、G1、SK、XL"></video></div>' +
+      '<p class="obs"><b>我抽帧看到的：</b>' + c.note + "</p>";
+    host.appendChild(card);
+    const vids = [...card.querySelectorAll("video")];
+    groups.push(vids);
+    // 同一卡片里的两段视频同步：一段播放/暂停/拖动，另一段跟着动
+    vids.forEach((v, i) => {
+      const other = vids[1 - i];
+      v.addEventListener("play", () => { other.currentTime = v.currentTime; other.play().catch(() => {}); });
+      v.addEventListener("pause", () => { if (!other.paused) other.pause(); });
+      v.addEventListener("seeked", () => { if (Math.abs(other.currentTime - v.currentTime) > 0.15) other.currentTime = v.currentTime; });
+    });
+  }
+  const all = () => groups.flat();
+  const playBtn = document.getElementById("play-all");
+  playBtn.addEventListener("click", () => {
+    const anyPaused = all().some((v) => v.paused);
+    all().forEach((v) => { if (anyPaused) { v.currentTime = 0; v.play().catch(() => {}); } else { v.pause(); } });
+    playBtn.textContent = anyPaused ? "全部暂停" : "全部播放";
+  });
+  const slow = document.getElementById("slow");
+  slow.addEventListener("click", () => {
+    const on = slow.getAttribute("aria-pressed") !== "true";
+    slow.setAttribute("aria-pressed", String(on));
+    all().forEach((v) => { v.playbackRate = on ? 0.5 : 1; });
+  });
+})();
+</script>
