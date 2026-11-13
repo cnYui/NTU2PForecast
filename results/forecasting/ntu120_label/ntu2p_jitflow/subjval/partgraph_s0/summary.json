@@ -1,0 +1,95 @@
+{
+  "ode0plan": {
+    "BR": {
+      "mpjpe": 0.1695901832961843,
+      "xyz_mse": 0.020279228709909596,
+      "xyz_mae": 0.08221534410348305,
+      "primary_excess_antic": 0.033029980545505065,
+      "missed_contact_total": 43,
+      "contact_rmse_push": 0.20695012098748178,
+      "contact_rmse_all": 0.19179383788048257,
+      "wrong_overlap": 0.005910931174089069,
+      "slide_frame_ratio": 0.029975200691313323,
+      "step_count": 1.6575342465753424,
+      "jerk_body": 21.16196872457572,
+      "foot_penetration_ratio": 0.026639676113360326,
+      "bone_rel_err_body": 9.703328185379609e-08,
+      "dct_mid_ratio": 0.2679771598256408,
+      "gait_sep_corr_f01_10": 0.6807231820030926,
+      "dct_low_ratio": 0.6381997815857681
+    },
+    "F13": {
+      "mpjpe": 0.16803326478853883,
+      "xyz_mse": 0.02014928326945797,
+      "xyz_mae": 0.0814494629982512,
+      "primary_excess_antic": 0.03137444108711044,
+      "missed_contact_total": 51,
+      "contact_rmse_push": 0.21447613930606854,
+      "contact_rmse_all": 0.18990152948004715,
+      "wrong_overlap": 0.0032388663967611335,
+      "slide_frame_ratio": 0.030372205751804753,
+      "step_count": 1.6095890410958904,
+      "jerk_body": 21.322480504369004,
+      "foot_penetration_ratio": 0.026275303643724695,
+      "bone_rel_err_body": 9.691799755137897e-08,
+      "dct_mid_ratio": 0.25932899573403756,
+      "gait_sep_corr_f01_10": 0.5044755929544414,
+      "dct_low_ratio": 0.6467737702224017
+    },
+    "SK": {
+      "mpjpe": 0.17384903627609918,
+      "xyz_mse": 0.021696916196932675,
+      "xyz_mae": 0.08416012936999441,
+      "primary_excess_antic": 0.04295799591018732,
+      "missed_contact_total": 47,
+      "contact_rmse_push": 0.2563477118974787,
+      "contact_rmse_all": 0.20232957032497328,
+      "wrong_overlap": 0.005991902834008097,
+      "slide_frame_ratio": 0.0296385448048555,
+      "step_count": 1.63013698630137,
+      "jerk_body": 20.964685119119014,
+      "foot_penetration_ratio": 0.02396761133603239,
+      "bone_rel_err_body": 9.713569892171556e-08,
+      "dct_mid_ratio": 0.30804604515240425,
+      "gait_sep_corr_f01_10": 0.622496732575346,
+      "dct_low_ratio": 0.6778466036267998
+    }
+  },
+  "ode0_mpjpe": {
+    "BR": 0.1691089686353197,
+    "F13": 0.16760139975711885,
+    "SK": 0.17338786192751124
+  },
+  "decisions": {
+    "F13": {
+      "gains": {
+        "精度：mpjpe ≤ 0.992×BR 且 xyz_mse ≤ BR": true,
+        "交互：超额后退 ≤ 0.9×BR 且漏接触 ≤ BR": false,
+        "腿：滑行 ≤ BR−0.005、步数 ≥ BR、交替相关 ≥ BR": false
+      },
+      "guards": {
+        "mpjpe ≤ 1.01×BR": true,
+        "jerk ≤ 24.5": true,
+        "骨长 ≤ 1e-5": true,
+        "穿地 ≤ BR+0.01": true,
+        "摆动 gate": true
+      },
+      "pass": true
+    },
+    "SK": {
+      "gains": {
+        "精度：mpjpe ≤ 0.992×BR 且 xyz_mse ≤ BR": false,
+        "交互：超额后退 ≤ 0.9×BR 且漏接触 ≤ BR": false,
+        "腿：滑行 ≤ BR−0.005、步数 ≥ BR、交替相关 ≥ BR": false
+      },
+      "guards": {
+        "mpjpe ≤ 1.01×BR": false,
+        "jerk ≤ 24.5": true,
+        "骨长 ≤ 1e-5": true,
+        "穿地 ≤ BR+0.01": true,
+        "摆动 gate": true
+      },
+      "pass": false
+    }
+  }
+}

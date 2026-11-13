@@ -1,0 +1,38 @@
+[
+  {
+    "index": 2,
+    "group": "test 步行窗（manifest 顺序前 3 个）",
+    "sample_id": "S001C001P003R001A003",
+    "action": "pushing",
+    "mpjpe": {
+      "BR": 0.23408586034744755,
+      "PG": 0.2372540537810583
+    },
+    "video": "case_002_S001C001P003R001A003.mp4",
+    "poster": "case_002_S001C001P003R001A003.jpg"
+  },
+  {
+    "index": 9,
+    "group": "test 步行窗（manifest 顺序前 3 个）",
+    "sample_id": "S001C001P003R001A010",
+    "action": "walking towards",
+    "mpjpe": {
+      "BR": 0.13883360494319166,
+      "PG": 0.1357330223532212
+    },
+    "video": "case_009_S001C001P003R001A010.mp4",
+    "poster": "case_009_S001C001P003R001A010.jpg"
+  },
+  {
+    "index": 10,
+    "group": "test 步行窗（manifest 顺序前 3 个）",
+    "sample_id": "S001C001P003R001A011",
+    "action": "walking apart",
+    "mpjpe": {
+      "BR": 0.3133907389364226,
+      "PG": 0.31456077707414337
+    },
+    "video": "case_010_S001C001P003R001A011.mp4",
+    "poster": "case_010_S001C001P003R001A011.jpg"
+  }
+]

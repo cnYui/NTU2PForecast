@@ -1,0 +1,61 @@
+{
+  "ode0plan": {
+    "BR": {
+      "mpjpe": 0.16780622424143046,
+      "xyz_mse": 0.019761432271435675,
+      "xyz_mae": 0.08155957820565111,
+      "primary_excess_antic": 0.031113170688757602,
+      "missed_contact_total": 48,
+      "contact_rmse_push": 0.240905551822593,
+      "contact_rmse_all": 0.18818574469080993,
+      "wrong_overlap": 0.0034008097165991904,
+      "slide_frame_ratio": 0.03540393539526037,
+      "step_count": 1.7397260273972603,
+      "jerk_body": 22.414486258766313,
+      "foot_penetration_ratio": 0.027125506072874495,
+      "bone_rel_err_body": 9.737813242624983e-08,
+      "dct_mid_ratio": 0.2826484916137063,
+      "gait_sep_corr_f01_10": 0.5479463400472275,
+      "dct_low_ratio": 0.6720949996995075
+    },
+    "F13": {
+      "mpjpe": 0.17095479815595063,
+      "xyz_mse": 0.020592902971786044,
+      "xyz_mae": 0.08299194285382143,
+      "primary_excess_antic": 0.034764372398881055,
+      "missed_contact_total": 53,
+      "contact_rmse_push": 0.2386816651034565,
+      "contact_rmse_all": 0.18959564011904326,
+      "wrong_overlap": 0.003157894736842105,
+      "slide_frame_ratio": 0.033523674721212725,
+      "step_count": 1.5684931506849316,
+      "jerk_body": 20.887467039627655,
+      "foot_penetration_ratio": 0.02562753036437247,
+      "bone_rel_err_body": 9.663988476921607e-08,
+      "dct_mid_ratio": 0.3070427878227614,
+      "gait_sep_corr_f01_10": 0.5754534047493519,
+      "dct_low_ratio": 0.610689158844166
+    }
+  },
+  "ode0_mpjpe": {
+    "BR": 0.16737880856402007,
+    "F13": 0.17040553930317343
+  },
+  "decisions": {
+    "F13": {
+      "gains": {
+        "精度：mpjpe ≤ 0.992×BR 且 xyz_mse ≤ BR": false,
+        "交互：超额后退 ≤ 0.9×BR 且漏接触 ≤ BR": false,
+        "腿：滑行 ≤ BR−0.005、步数 ≥ BR、交替相关 ≥ BR": false
+      },
+      "guards": {
+        "mpjpe ≤ 1.01×BR": false,
+        "jerk ≤ 24.5": true,
+        "骨长 ≤ 1e-5": true,
+        "穿地 ≤ BR+0.01": true,
+        "摆动 gate": true
+      },
+      "pass": false
+    }
+  }
+}

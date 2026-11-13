@@ -1,0 +1,306 @@
+<title>NTU2P 图结构实验汇总</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* 版式：单栏实验档案。先讲两种"图"的区别，再按时间排的五次尝试（真正的时间序列，所以编号），
+     然后用一张"加图带来的变化"总图收束，最后回答两个问题。颜色：青绿 = 主线在用，灰虚 = 试过不采纳；绿/红只表示变好/变差。 */
+  :root {
+    --bg: #F5F7FA;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --accent: #0E7C74;
+    --accent-tint: #E2F3F1;
+    --old: #8A94A3;
+    --old-tint: #EEF0F3;
+    --good: #1F7A3A;
+    --bad: #B4381F;
+    --band: #F1E7C9;
+    --person-a: #2F6BFF;
+    --person-b: #E5484D;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+      --good: #5CC27A; --bad: #F08A6E; --band: #3A3320; --person-a: #6C97FF; --person-b: #FF7A7E; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --accent: #3CC7B8; --accent-tint: #12302E; --old: #7C8796; --old-tint: #1D242D;
+    --good: #5CC27A; --bad: #F08A6E; --band: #3A3320; --person-a: #6C97FF; --person-b: #FF7A7E; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.75; }
+  .page {
+    max-width: 1000px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 56px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); }
+  h2 { font-size: var(--step-2); }
+  h3 { font-size: var(--step-1); }
+  p { margin: 0; max-width: 70ch; }
+  section { display: grid; gap: 18px; min-width: 0; }
+  code { font-family: var(--font-mono); font-size: 0.86em; }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .lede { color: var(--muted); }
+  .note { font-size: var(--step--1); color: var(--muted); max-width: 82ch; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+  .box { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 16px; display: grid; gap: 10px; min-width: 0; align-content: start; }
+  .box h3 { font-size: var(--step-0); }
+  .box p { font-size: var(--step--1); color: var(--muted); }
+  svg.mini { display: block; width: 100%; height: auto; }
+  .scroll { overflow-x: auto; }
+  svg.chart { display: block; width: 100%; min-width: 620px; height: auto; font-family: var(--font-body); }
+
+  ol.tries { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: t; }
+  ol.tries > li { counter-increment: t; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 16px; }
+  ol.tries > li.main { box-shadow: inset 4px 0 0 var(--accent); }
+  ol.tries > li.rej { box-shadow: inset 4px 0 0 var(--old); }
+  ol.tries > li.pend { box-shadow: inset 4px 0 0 var(--good); }
+  ol.tries > li::before { content: counter(t); font-family: var(--font-mono); font-size: var(--step-2); color: var(--muted); line-height: 1.1; }
+  .try { display: grid; gap: 8px; min-width: 0; }
+  .try .head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+  .try .date { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chip { font-size: 0.75rem; border-radius: 999px; padding: 1px 10px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .chip.main { color: var(--accent); border-color: var(--accent); background: var(--accent-tint); }
+  .chip.rej { color: var(--old); border-color: var(--old); border-style: dashed; background: var(--old-tint); }
+  .chip.pend { color: var(--good); border-color: var(--good); }
+  .kv { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 4px 12px; font-size: var(--step--1); }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; }
+  @media (max-width: 560px) { .kv { grid-template-columns: minmax(0, 1fr); } ol.tries > li { grid-template-columns: minmax(0, 1fr); } }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--step--1); color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .answer { display: grid; gap: 10px; border-left: 3px solid var(--accent); padding-left: 16px; }
+  .answer .verdict { font-weight: 700; font-size: var(--step-1); }
+  ul.notes { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 82ch; }
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  footer { font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+</style>
+
+<main class="page">
+  <header style="display:grid; gap:12px">
+    <div class="eyebrow">NTU120 双人动作预测 · 2026-10-14 至 11-05 · 受试者留出验证集</div>
+    <h1>NTU2P 图结构实验汇总</h1>
+    <p class="lede">一共做过七次和"图"有关的尝试。主线现在用的是时空图注意力（第 1 次）；之后加的四种显式交互图都没有提升；11-06 新跑的两项也都没有提升：骨架邻接图（GCN 式）变差；只细分部位在 seed0 上刚过门槛，补 seed 后变差。页面最后回答两个问题：要不要试经典骨架图卷积，每人 5 个部位能不能分得更细。</p>
+  </header>
+
+  <section aria-labelledby="h-kinds">
+    <h2 id="h-kinds">两种"图"</h2>
+    <div class="two">
+      <div class="box">
+        <h3>全连接注意力图（我们一直在用的）</h3>
+        <svg class="mini" viewBox="0 0 300 150" role="img" aria-label="六个节点两两相连，边的粗细表示学出来的权重">
+          <g style="stroke: var(--accent); fill: none">
+            <line x1="50" y1="40" x2="150" y2="25" stroke-width="2.5"/><line x1="50" y1="40" x2="250" y2="40" stroke-width="0.8"/>
+            <line x1="50" y1="40" x2="50" y2="115" stroke-width="1.6"/><line x1="50" y1="40" x2="150" y2="130" stroke-width="0.8"/>
+            <line x1="50" y1="40" x2="250" y2="115" stroke-width="2"/><line x1="150" y1="25" x2="250" y2="40" stroke-width="1.2"/>
+            <line x1="150" y1="25" x2="50" y2="115" stroke-width="0.8"/><line x1="150" y1="25" x2="150" y2="130" stroke-width="1.8"/>
+            <line x1="150" y1="25" x2="250" y2="115" stroke-width="0.8"/><line x1="250" y1="40" x2="50" y2="115" stroke-width="0.8"/>
+            <line x1="250" y1="40" x2="150" y2="130" stroke-width="1.2"/><line x1="250" y1="40" x2="250" y2="115" stroke-width="2.4"/>
+            <line x1="50" y1="115" x2="150" y2="130" stroke-width="1.4"/><line x1="50" y1="115" x2="250" y2="115" stroke-width="0.8"/>
+            <line x1="150" y1="130" x2="250" y2="115" stroke-width="1.6"/>
+          </g>
+          <g><circle cx="50" cy="40" r="9" style="fill: var(--person-a)"/><circle cx="150" cy="25" r="9" style="fill: var(--person-a)"/><circle cx="50" cy="115" r="9" style="fill: var(--person-a)"/>
+          <circle cx="250" cy="40" r="9" style="fill: var(--person-b)"/><circle cx="150" cy="130" r="9" style="fill: var(--person-b)"/><circle cx="250" cy="115" r="9" style="fill: var(--person-b)"/></g>
+        </svg>
+        <p>每个节点和所有节点相连，边权由注意力现算，再加上按"哪两种节点"学到的偏置。数学上 Transformer 就是在全连接图上传消息的图神经网络。优点是灵活，代价是要从数据里学出哪些边重要。</p>
+      </div>
+      <div class="box">
+        <h3>固定骨架图卷积（经典 GCN / ST-GCN，没试过）</h3>
+        <svg class="mini" viewBox="0 0 300 150" role="img" aria-label="一个简化骨架，消息只沿骨头连线传递">
+          <g style="stroke: var(--old); stroke-width: 2.2">
+            <line x1="90" y1="25" x2="90" y2="60"/><line x1="90" y1="60" x2="90" y2="95"/><line x1="90" y1="60" x2="60" y2="80"/><line x1="60" y1="80" x2="50" y2="105"/>
+            <line x1="90" y1="60" x2="120" y2="80"/><line x1="120" y1="80" x2="130" y2="105"/><line x1="90" y1="95" x2="75" y2="135"/><line x1="90" y1="95" x2="105" y2="135"/>
+            <line x1="210" y1="25" x2="210" y2="60"/><line x1="210" y1="60" x2="210" y2="95"/><line x1="210" y1="60" x2="180" y2="80"/><line x1="180" y1="80" x2="170" y2="105"/>
+            <line x1="210" y1="60" x2="240" y2="80"/><line x1="240" y1="80" x2="250" y2="105"/><line x1="210" y1="95" x2="195" y2="135"/><line x1="210" y1="95" x2="225" y2="135"/>
+          </g>
+          <line x1="130" y1="105" x2="210" y2="60" style="stroke: var(--old); stroke-width: 1.2; stroke-dasharray: 4 3"/>
+          <text x="150" y="148" text-anchor="middle" style="fill: var(--muted); font-size: 10px">虚线：跨人边要人为指定</text>
+          <g style="fill: var(--person-a)"><circle cx="90" cy="25" r="5"/><circle cx="90" cy="60" r="4"/><circle cx="90" cy="95" r="4"/><circle cx="60" cy="80" r="4"/><circle cx="50" cy="105" r="4"/><circle cx="120" cy="80" r="4"/><circle cx="130" cy="105" r="4"/><circle cx="75" cy="135" r="4"/><circle cx="105" cy="135" r="4"/></g>
+          <g style="fill: var(--person-b)"><circle cx="210" cy="25" r="5"/><circle cx="210" cy="60" r="4"/><circle cx="210" cy="95" r="4"/><circle cx="180" cy="80" r="4"/><circle cx="170" cy="105" r="4"/><circle cx="240" cy="80" r="4"/><circle cx="250" cy="105" r="4"/><circle cx="195" cy="135" r="4"/><circle cx="225" cy="135" r="4"/></g>
+        </svg>
+        <p>节点是关节，消息只沿骨头（肩→肘→腕）和相邻帧传递，邻接关系是固定的。人体结构的先验很强、参数少；但两个人之间连哪些边，必须人为设计。</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-tries">
+    <h2 id="h-tries">做过的七次尝试</h2>
+    <ol class="tries">
+      <li class="main"><div class="try">
+        <div class="head"><h3>时空图注意力 STG（J3）</h3><span class="date">2026-10-19</span><span class="chip main">主线在用</span></div>
+        <dl class="kv">
+          <dt>做法</dt><dd>节点 = 2 人 × 5 部位 × 12 个 5 帧块 = 120 个；全连接注意力，加"部位对（同人/跨人分开）"和"相隔几块"两种可学习边偏置。</dd>
+          <dt>结果</dt><dd>3 seed 端点 mpjpe 比 FD2 低 3.30%，但 jerk 是 FD2 的 1.26 倍。同结构去掉流训练（J4N）只低 0.71%，说明大部分收益来自流训练，不是图结构本身。</dd>
+          <dt>现状</dt><dd>后来加上 11 阶带限和配方分支，成为现在主线 BR 的去噪器。</dd>
+        </dl>
+      </div></li>
+      <li class="rej"><div class="try">
+        <div class="head"><h3>接触图纠正器 C2 / F2</h3><span class="date">2026-10-14</span><span class="chip rej">不采纳</span></div>
+        <dl class="kv">
+          <dt>做法</dt><dd>在 FD2 输出上接一个纠正器，内部有骨架图和跨人"掌腕 ↔ 躯干"显式图。C 组冻结 FD2，F 组端到端解冻。</dd>
+          <dt>对照</dt><dd>同结构不带图的 C1 / F1。</dd>
+          <dt>结果</dt><dd>C2 相对 C1：mpjpe +0.04%（0.171238 vs 0.171175）；F2 相对 F1：−0.013%。加图没有增量；推人距离误差也没有改善。</dd>
+        </dl>
+      </div></li>
+      <li class="rej"><div class="try">
+        <div class="head"><h3>STG + 接触图 + 跨人因果（J4）</h3><span class="date">2026-10-19</span><span class="chip rej">不采纳</span></div>
+        <dl class="kv">
+          <dt>做法</dt><dd>在 J3 上按"对方手离本人躯干多近、正在接近多快、是否已接触"给注意力加偏置；再加跨人因果掩码，一个人第 i 块只能看对方第 ≤ i 块。</dd>
+          <dt>对照</dt><dd>J3（3 seed）。</dd>
+          <dt>结果</dt><dd>mpjpe 0.16666 vs 0.16652（+0.08%，持平）；接触前超额后退 0.0374 vs 0.0309（<span class="bad">+21%</span>，变差）。</dd>
+        </dl>
+      </div></li>
+      <li class="rej"><div class="try">
+        <div class="head"><h3>关节级交互图 G1 / G2</h3><span class="date">2026-11-04</span><span class="chip rej">不采纳</span></div>
+        <dl class="kv">
+          <dt>做法</dt><dd>每人从 5 个部位细分为 13 个关节组（手、肘、肩、胸、头分开，token 120 → 312）；跨人边按两组实际距离（0–1.4 m 的 RBF 展开）加权，加跨人因果。G2 再加"手到对方躯干距离曲线"和"两人最近距离曲线"两项损失。</dd>
+          <dt>对照</dt><dd>主线 BR（同 seed）。</dd>
+          <dt>结果</dt><dd>seed0：超额后退 G1 −1.5%、G2 +2.7%（要求降 20%），漏接触 43 → 47 / 49；G2 推人接触距离误差 −8%。G1 在 seed0 上 mpjpe −2.2%，补 seed1、seed2 后均值 <span class="bad">+0.60%</span>，3 seed 均值 −0.35%，判为噪声。</dd>
+        </dl>
+      </div></li>
+      <li class="rej"><div class="try">
+        <div class="head"><h3>跨人腿部 Transformer（XL）</h3><span class="date">2026-11-05</span><span class="chip rej">不采纳</span></div>
+        <dl class="kv">
+          <dt>做法</dt><dd>两人 × 两条腿 × 12 块共 48 个节点全连接注意力，零初始化修正腿流输出。</dd>
+          <dt>对照</dt><dd>主线 BR（同 seed）。</dd>
+          <dt>结果</dt><dd>mpjpe <span class="bad">+1.94%</span>，超额后退 <span class="bad">+53%</span>，漏接触 43 → 51，左右脚交替相关 0.68 → 0.60；#194 两人交叉穿过。</dd>
+        </dl>
+      </div></li>
+      <li class="rej"><div class="try">
+        <div class="head"><h3>只细分部位（F13）</h3><span class="date">2026-11-06</span><span class="chip rej">不采纳</span></div>
+        <dl class="kv">
+          <dt>做法</dt><dd>每人 5 个部位 → 13 个关节组（token 120 → 312），不加距离边、不加跨人因果，其余与 BR 相同。把 G1 的三处改动拆开，单独看细分。</dd>
+          <dt>对照</dt><dd>主线 BR（同 seed）。</dd>
+          <dt>结果</dt><dd>mpjpe <span class="good">−0.92%</span>、mse −0.64%、错误重叠 −45%；但漏接触 43 → 51、左右脚交替相关 0.68 → <span class="bad">0.50</span>。seed0 上按规则"有增量"，但补 seed1、seed2 后均值 mpjpe <span class="bad">+1.60%</span>、mse +4.7%，两个 seed 都比 BR 差，判为 seed0 的偶然结果。</dd>
+        </dl>
+      </div></li>
+      <li class="rej"><div class="try">
+        <div class="head"><h3>骨架邻接图（SK，GCN 式）</h3><span class="date">2026-11-06</span><span class="chip rej">不采纳</span></div>
+        <dl class="kv">
+          <dt>做法</dt><dd>5 个部位不变，注意力加硬邻接掩码：同人只躯干连四肢，跨人只经躯干相连，时间只看 ±2 块（可见对 16.5%）。不加参数。</dd>
+          <dt>对照</dt><dd>主线 BR（同 seed）。</dd>
+          <dt>结果</dt><dd>mpjpe <span class="bad">+2.51%</span>、mse +7.0%、超额后退 <span class="bad">+30%</span>、推人接触误差 +24%。骨架硬连接限制了信息流动，在这里不合适。</dd>
+        </dl>
+      </div></li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="h-chart">
+    <h2 id="h-chart">加图带来的变化（相对同轮不加图的对照）</h2>
+    <div class="box scroll">
+      <svg class="chart" id="c-gain" viewBox="0 0 900 420" role="img" aria-label="五个加图版本相对各自无图对照的 mpjpe 变化和接触前超额后退变化"></svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>mpjpe 变化</span><span><i style="background:var(--old)"></i>接触前超额后退变化</span><span><i style="background:var(--band)"></i>±0.8% 单 seed 噪声带（只对 mpjpe 有意义）</span></div>
+    </div>
+    <p class="note">负数 = 变好。C2 / F2 那一轮用的交互指标口径不同，没有超额后退这一项。G1 的 mpjpe 用 3 seed 均值，其余交互数字都是 seed0。除了 G1 在 seed0 上偶然的 −2.2%（补 seed 后消失），没有一次加图让 mpjpe 跳出噪声带往好的方向走；交互指标多数变差。</p>
+  </section>
+
+  <section aria-labelledby="h-q1">
+    <h2 id="h-q1">问题一：经典骨架图卷积有必要试吗？</h2>
+    <div class="answer">
+      <div class="verdict">已经跑了（第 7 次 SK）：变差，不采纳。下面是跑之前的判断，结果印证了它。</div>
+      <ul class="notes">
+        <li><b>它要解决的问题，我们大多已经解决了。</b>骨架 GCN 的主要好处是"人体内部的运动学先验"：骨头连着的关节一起动。我们已经有骨架投影（骨长恒定）、刚体手、按部位成组的 token，人体内部结构不是现在的短板。</li>
+        <li><b>剩下的问题不在"信息怎么在关节间传"。</b>现在的三个主要问题是四肢摆动偏少、手没碰到就躲、走错方向撞人。我们反复看到的原因是确定性读出把多种可能的未来平均掉了，而不是某两个关节之间缺一条边。前面四次加图都没改善这些，换成固定邻接的 GCN 也很难改变这一点。</li>
+        <li><b>跨人的边还是要人为设计。</b>GCN 在两个人之间连哪些边，正是 G1 试过的事（手 ↔ 肩等按距离连），没有效果。</li>
+        <li><b>能做得很便宜。</b>如果想确认一下，不用重写模型：在现在的 STG 注意力里加一个"骨架邻接"偏置或掩码（同一人只允许骨头相连的部位和相邻时间块互相看），就是一个 GCN 式的约束。H-val seed0 跑一次约 1 小时。我预计结果会和前几次一样落在噪声内，所以把它放在第二个问题之后。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-q2">
+    <h2 id="h-q2">问题二：每人 5 个部位，能不能分得更细？</h2>
+    <div class="answer">
+      <div class="verdict">已经跑了（第 6 次 F13）：seed0 −0.92%，补 seed1、seed2 后均值 +1.60%，不采纳。细分本身没有带来提升。下面是跑之前的分析。</div>
+      <ul class="notes">
+        <li><b>G1 已经分成了 13 组，但同时改了三件事：</b>13 组细分、按距离加权的跨人边、跨人因果掩码。结果没有提升，可我们分不清是"细分没用"，还是被另外两项拖累了。只做细分、其他不动的对照还没有做过。</li>
+        <li><b>能分到多细：</b></li>
+      </ul>
+      <div class="table">
+        <table>
+          <thead><tr><th>分法</th><th>每人节点数</th><th>总 token 数</th><th>注意力计算量（相对现在）</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>现在（粗）</td><td>5</td><td>120</td><td>1×</td><td>躯干头、左臂、右臂、左腿、右腿</td></tr>
+            <tr><td>细分（G1 的分法）</td><td>13</td><td>312</td><td>约 6.8×</td><td>手、肘、肩、胸、头、大腿、脚分开；手和对方肩可以成为独立的边</td></tr>
+            <tr><td>每个关节一个节点</td><td>29</td><td>696</td><td>约 34×</td><td>最细，显存和训练时间都明显增加，1709 条数据可能撑不起</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="notes">
+        <li><b>建议的实验：</b>只把部位从 5 组换成 13 组，不加距离边、不加因果掩码，其余与主线 BR 完全相同。代码里已经有这个开关（<code>part_scheme="fine"</code>），H-val seed0 × 10000 步，约 1.2 小时，和已有的 BR seed0 配对比较，判定规则照旧事先写好。</li>
+        <li><b>预期：</b>G1 的 3 seed 均值是 −0.35%，说明 13 组细分至少没有把精度弄坏。细分让"手 ↔ 肩"这种关系更容易表达，但我不预期它能解决"手没碰到就躲"，那是时机被平均掉的问题。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <span>来源：ReGenNet <code>docs/ai/context/20261014-153106-ntu2p-contact-graph-diffusion-final-result.md</code>、<code>20261019-034335-ntu2p-jitflow-rl-final-result.md</code>；NTU2PForecast <code>docs/ai/context/20261104-193546-ntu2p-joint-interaction-graph-result.md</code>、<code>20261104-225520-ntu2p-g1-accuracy-verification-result.md</code>、<code>20261105-225809-ntu2p-cross-person-leg-transformer-result.md</code>。</span>
+    <span>STG 训练在 GPU 上逐运行不确定，单 seed 的 mpjpe 噪声约 0.8%。</span>
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  // [名称, mpjpe 变化 %, 超额后退变化 %（null = 该轮无此指标）, 说明]
+  const ROWS = [
+    ["C2 接触图纠正器（vs C1）", 0.037, null, "seed0 5000 步"],
+    ["F2 端到端接触图（vs F1）", -0.013, null, "seed0 5000 步"],
+    ["J4 接触图 + 因果（vs J3）", 0.084, 21.0, "3 seed"],
+    ["G1 关节级交互图（vs BR）", -0.35, -1.5, "mpjpe 3 seed，交互 seed0"],
+    ["G2 + 交互损失（vs BR）", 0.05, 2.7, "seed0"],
+    ["XL 跨人腿部注意力（vs BR）", 1.94, 53.0, "seed0"],
+    ["F13 只细分部位（vs BR）", 1.60, 25.3, "seed1/2 均值"],
+    ["SK 骨架邻接图（vs BR）", 2.51, 30.1, "seed0"],
+  ];
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+  const svg = document.getElementById("c-gain");
+  const W = 900, L = 250, R = 70, T = 30, rowH = 46;
+  const lo = -10, hi = 60;
+  // 分段刻度：mpjpe 的变化很小，用对称对数把 ±2% 和 +53% 放在同一张图里
+  const f = (p) => Math.sign(p) * Math.log10(1 + Math.abs(p));
+  const x = (p) => L + (W - L - R) * (f(p) - f(lo)) / (f(hi) - f(lo));
+  svg.appendChild(el("rect", { x: x(-0.8), y: T - 8, width: x(0.8) - x(-0.8), height: rowH * ROWS.length + 4, style: "fill: var(--band)" }));
+  for (const v of [-10, -2, -1, 0, 1, 2, 5, 10, 20, 50]) {
+    svg.appendChild(el("line", { x1: x(v), x2: x(v), y1: T - 8, y2: T + rowH * ROWS.length - 4, style: "stroke: " + (v === 0 ? "var(--fg)" : "var(--line)") + "; stroke-width: " + (v === 0 ? 1.4 : 1) }));
+    svg.appendChild(el("text", { x: x(v), y: 16, "text-anchor": "middle", style: "fill: var(--muted); font-size: 11px" }, (v > 0 ? "+" : "") + v + "%"));
+  }
+  ROWS.forEach(([name, dm, da, note], i) => {
+    const y0 = T + rowH * i;
+    svg.appendChild(el("text", { x: L - 10, y: y0 + 14, "text-anchor": "end", style: "fill: var(--fg); font-size: 12px" }, name));
+    svg.appendChild(el("text", { x: L - 10, y: y0 + 29, "text-anchor": "end", style: "fill: var(--muted); font-size: 10.5px" }, note));
+    const bar = (v, y, color) => {
+      const a = x(0), b = x(v);
+      svg.appendChild(el("rect", { x: Math.min(a, b), y, width: Math.max(2, Math.abs(b - a)), height: 12, rx: 2, style: "fill: " + color }));
+      svg.appendChild(el("text", { x: v >= 0 ? b + 5 : b - 5, y: y + 10, "text-anchor": v >= 0 ? "start" : "end", style: "fill: " + (v > 0 ? "var(--bad)" : "var(--good)") + "; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums" }, (v > 0 ? "+" : "") + v.toFixed(Math.abs(v) < 1 ? 2 : 1) + "%"));
+    };
+    bar(dm, y0 + 4, "var(--accent)");
+    if (da != null) bar(da, y0 + 20, "var(--old)");
+    else svg.appendChild(el("text", { x: x(0) + 6, y: y0 + 30, style: "fill: var(--muted); font-size: 10.5px" }, "无超额后退指标"));
+  });
+  svg.appendChild(el("text", { x: L, y: T + rowH * ROWS.length + 14, style: "fill: var(--muted); font-size: 10.5px" }, "横轴为对称对数刻度：小幅变化放大显示，大幅变化压缩显示"));
+})();
+</script>

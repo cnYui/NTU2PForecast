@@ -1,0 +1,300 @@
+<title>DCT 低通去抖</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<script>
+  window.MathJax = { tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] }, svg: { fontCache: "global" } };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.js" async></script>
+<style>
+  /* 版式：单栏讲义；开头是可拖动阶数的真实轨迹演示，下面四步公式，再讲模型里的用法与代价。
+     颜色沿用 NTU2P 页面：青绿 = 保留下来的低频，砖红 = 被去掉的高频。 */
+  :root {
+    --bg: #F5F7FA;
+    --panel: #FFFFFF;
+    --fg: #17202B;
+    --muted: #5A6573;
+    --line: #D3DAE3;
+    --accent: #0E7C74;
+    --accent-tint: #E2F3F1;
+    --cut: #B4381F;
+    --cut-tint: #F8E6E1;
+    --raw: #8A94A3;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 0.9375rem;
+    --step-1: 1.125rem;
+    --step-2: 1.5rem;
+    --step-3: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+      --accent: #3CC7B8; --accent-tint: #12302E; --cut: #F08A6E; --cut-tint: #3A231D; --raw: #7C8796; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141A; --panel: #161D25; --fg: #E5EAF0; --muted: #9BA6B4; --line: #2B3540;
+    --accent: #3CC7B8; --accent-tint: #12302E; --cut: #F08A6E; --cut-tint: #3A231D; --raw: #7C8796; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.75; }
+  .page {
+    max-width: 980px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 40px 64px;
+    display: grid; gap: 56px;
+  }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+  h1 { font-size: var(--step-3); }
+  h2 { font-size: var(--step-2); }
+  h3 { font-size: var(--step-1); }
+  p { margin: 0; max-width: 68ch; }
+  section { display: grid; gap: 18px; min-width: 0; }
+  code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted); }
+  .lede { color: var(--muted); }
+  .muted { color: var(--muted); }
+
+  .demo { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  button { font: inherit; font-size: var(--step--1); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .slider { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .slider label { font-size: var(--step--1); color: var(--muted); white-space: nowrap; }
+  .slider input { width: 100%; accent-color: var(--accent); }
+  .kval { font-family: var(--font-mono); font-size: var(--step-1); font-weight: 500; color: var(--accent); min-width: 5.5ch; text-align: right; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .stat { background: var(--panel); padding: 10px 12px; display: grid; gap: 2px; }
+  .stat .k { font-size: 0.75rem; color: var(--muted); }
+  .stat .v { font-size: var(--step-1); font-weight: 700; font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .note { font-size: var(--step--1); color: var(--muted); }
+  .chart { display: grid; gap: 4px; min-width: 0; }
+  .chart .title { font-size: var(--step--1); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+  .chart svg { width: 100%; height: auto; display: block; font-family: var(--font-body); }
+  .key { display: inline-flex; align-items: center; gap: 6px; }
+  .key i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  .steps { display: grid; gap: 22px; }
+  .stp { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 12px; }
+  .stp .n { font-family: var(--font-mono); font-size: var(--step-2); color: var(--accent); line-height: 1.2; }
+  .stp .body { display: grid; gap: 8px; min-width: 0; }
+  .math { overflow-x: auto; padding: 4px 0; }
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+  thead th { color: var(--muted); font-weight: 500; background: var(--bg); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.keep td { background: var(--accent-tint); }
+  ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 72ch; }
+  footer { font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+</style>
+
+<main class="page">
+  <header style="display:grid; gap:12px">
+    <div class="eyebrow">NTU2P 扩散主线 · 表示层 · 60 帧窗口，20 fps</div>
+    <h1>DCT 为什么能滤掉抖动</h1>
+    <p class="lede">DCT 把一段运动拆成不同频率的余弦波。只保留低频的前 K 个，再拼回去，高频抖动就不在结果里了。下面先用真实骨架轨迹动手试，再看公式。</p>
+  </header>
+
+  <section aria-labelledby="h-demo">
+    <h2 id="h-demo">拖动 K，看保留和去掉的是什么</h2>
+    <div class="demo">
+      <div class="row" id="series-btns" role="group" aria-label="选择关节轨迹"></div>
+      <p class="note" id="series-note"></p>
+      <div class="slider">
+        <label for="k">保留前 K 阶</label>
+        <input type="range" id="k" min="1" max="60" step="1" value="11">
+        <span class="kval" id="kval">K = 11</span>
+      </div>
+      <div class="row">
+        <button type="button" class="preset" data-k="11" aria-pressed="true">主线局部 11 阶</button>
+        <button type="button" class="preset" data-k="20" aria-pressed="false">FD2 局部 20 阶</button>
+        <button type="button" class="preset" data-k="8" aria-pressed="false">骨盆 8 阶</button>
+        <button type="button" class="preset" data-k="60" aria-pressed="false">全部 60 阶</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="k">保留的最高频率</span><span class="v" id="s-f">1.67 Hz</span></div>
+        <div class="stat"><span class="k">去掉的能量（不计均值）</span><span class="v" id="s-e">—</span></div>
+        <div class="stat"><span class="k">去掉部分的 RMS</span><span class="v" id="s-r">—</span></div>
+        <div class="stat"><span class="k">轨迹起伏范围</span><span class="v" id="s-range">—</span></div>
+      </div>
+      <div class="chart">
+        <div class="title">
+          <span>① 原始轨迹与重建（毫米）</span>
+          <span class="key"><i style="background:var(--raw)"></i>原始 GT</span>
+          <span class="key"><i style="background:var(--accent)"></i>保留前 K 阶后的重建</span>
+        </div>
+        <svg id="c-signal" viewBox="0 0 900 230" role="img" aria-label="原始轨迹与低通重建"></svg>
+      </div>
+      <div class="chart">
+        <div class="title"><span>② 被去掉的部分 x − x̂（毫米）</span><span class="key"><i style="background:var(--cut)"></i>高频残余</span></div>
+        <svg id="c-resid" viewBox="0 0 900 130" role="img" aria-label="被去掉的高频部分"></svg>
+      </div>
+      <div class="chart">
+        <div class="title"><span>③ 频谱：每个系数的能量 c<sub>k</sub>²（对数刻度）</span><span class="key"><i style="background:var(--accent)"></i>保留</span><span class="key"><i style="background:var(--cut)"></i>去掉</span></div>
+        <svg id="c-spec" viewBox="0 0 900 190" role="img" aria-label="DCT 系数能量频谱与截断线"></svg>
+      </div>
+      <p class="note">演示用普通的 60 帧 DCT（观测 10 帧 + 未来 50 帧）。模型里用的是只取未来 50 帧、乘 ramp 再正交化的版本，原理相同。轨迹是受试者留出验证集的真实 GT，规范坐标系，高度轴。</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-math">
+    <h2 id="h-math">四个公式</h2>
+    <div class="steps">
+      <div class="stp"><span class="n">1</span><div class="body">
+        <h3>拆成余弦波</h3>
+        <p>一段长 \(N\) 帧的关节坐标 \(x_0,\dots,x_{N-1}\)，可以精确写成 \(N\) 个余弦基的加权和（正交归一化的 DCT-II）：</p>
+        <div class="math">\[ x_t=\sum_{k=0}^{N-1} c_k\,\phi_k(t),\qquad \phi_k(t)=a_k\cos\!\Big(\frac{\pi k\,(t+\tfrac12)}{N}\Big),\qquad a_0=\sqrt{1/N},\ a_{k\ge1}=\sqrt{2/N} \]</div>
+        <p>系数是轨迹在每个基上的投影，\(c_k\) 表示这段运动里第 \(k\) 个频率成分有多强：</p>
+        <div class="math">\[ c_k=\sum_{t=0}^{N-1} x_t\,\phi_k(t) \]</div>
+      </div></div>
+      <div class="stp"><span class="n">2</span><div class="body">
+        <h3>第 k 个基是多高的频率</h3>
+        <p>\(\phi_k\) 在 \(N\) 帧里走 \(k/2\) 个周期。帧率为 \(f_s\) 时：</p>
+        <div class="math">\[ f_k=\frac{k\,f_s}{2N}\quad\xrightarrow{\;N=60,\ f_s=20\;}\quad f_k=\frac{k}{6}\ \text{Hz} \]</div>
+        <p>主线局部只留 \(K=11\)（\(k=0,\dots,10\)），最高约 1.7 Hz，覆盖 1–2 Hz 的迈步。逐帧来回跳的抖动 \(\varepsilon(-1)^t\) 接近 \(f_s/2=10\) Hz，对应 \(k\approx 60\)。</p>
+      </div></div>
+      <div class="stp"><span class="n">3</span><div class="body">
+        <h3>只用前 K 个重建，就是低通滤波</h3>
+        <div class="math">\[ \hat x_t=\sum_{k=0}^{K-1} c_k\,\phi_k(t) \]</div>
+      </div></div>
+      <div class="stp"><span class="n">4</span><div class="body">
+        <h3>去掉的正好是高频能量</h3>
+        <p>基彼此正交，能量可以按频率分开算（Parseval）：</p>
+        <div class="math">\[ \|x\|^2=\sum_{k=0}^{N-1}c_k^2,\qquad \|x-\hat x\|^2=\sum_{k=K}^{N-1}c_k^2 \]</div>
+        <p>误差只来自 \(k\ge K\) 的系数。抖动的能量都在这里，所以被整块去掉；低频的真实动作原样保留。上面演示里的"去掉的能量"就是这个比值。</p>
+      </div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-model">
+    <h2 id="h-model">在模型里怎么用</h2>
+    <div class="table">
+      <table>
+        <thead><tr><th>阶数 K</th><th>最高频率 \(f_{K-1}\)</th><th>谁在用</th></tr></thead>
+        <tbody>
+          <tr><td>8</td><td>1.17 Hz</td><td>骨盆轨迹（两代模型都是）</td></tr>
+          <tr class="keep"><td>11</td><td>1.67 Hz</td><td>扩散主线的局部关节</td></tr>
+          <tr><td>20</td><td>3.17 Hz</td><td>FD2 的局部关节；上一轮扩散 J3 也用 20 阶</td></tr>
+          <tr><td>60</td><td>9.83 Hz</td><td>不截断，等于直接用 xyz 时间序列</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li><b>只取未来、乘 ramp、再正交化。</b>模型的基是 \(\psi_k(t)=r_t\,\phi_k(10+t)\)，\(t=0,\dots,49\)，ramp \(r=(0,0.2,0.4,0.6,0.8,1,1,\dots)\)，这样第 1 帧残差恒为 0，预测从观测末帧接上。再用 QR 把这 K 个基正交化，编码就是投影，Parseval 仍然成立。</li>
+      <li><b>扩散生成的就是这些系数。</b>状态 \(z=(c_0,\dots,c_{K-1})\)，不管去噪器输出什么，解码出的动作都只能是 K 个低频余弦的组合，表示里写不出 10 Hz 的抖动。</li>
+      <li><b>效果。</b>局部用 20 阶时，GT 里 2 Hz 以上的拟合抖动也成了要学的目标，扩散把它当成动作生成出来，单样本 jerk 55；减到 11 阶后降到 29。</li>
+      <li><b>代价。</b>截断也会削掉真实的快动作，比如一记快拳的尖峰。用 GT 测过：11 阶编解码带来的误差只有 FD2 mse 的 0.82%。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>项目 NTU2PForecast。编解码实现见 <code>model/forecasting_ntu2p_jitflow.py</code> 的 <code>RampDCTCodec</code>；11 阶的选择见 <code>scripts/diag_ntu2p_band_oracle.py</code> 与 <code>docs/ai/context/20261103-215324-ntu2p-diffusion-full-prediction-design-and-plan.md</code>。</span>
+  </footer>
+</main>
+
+<script type="application/json" id="series-data">__SERIES__</script>
+<script>
+(function () {
+  "use strict";
+  const SERIES = JSON.parse(document.getElementById("series-data").textContent);
+  const N = 60, OBS = 10, W = 900, PADL = 52, PADR = 14;
+  // 正交归一化 DCT-II 基：phi[k][t]
+  const PHI = [];
+  for (let k = 0; k < N; k++) {
+    const a = k === 0 ? Math.sqrt(1 / N) : Math.sqrt(2 / N);
+    PHI.push(Array.from({ length: N }, (_, t) => a * Math.cos(Math.PI * k * (t + 0.5) / N)));
+  }
+  const dct = (x) => PHI.map((row) => row.reduce((s, v, t) => s + v * x[t], 0));
+  const idct = (c, K) => Array.from({ length: N }, (_, t) => { let s = 0; for (let k = 0; k < K; k++) s += c[k] * PHI[k][t]; return s; });
+
+  let si = 3, K = 11;
+  const $ = (id) => document.getElementById(id);
+  const xOf = (t) => PADL + (W - PADL - PADR) * t / (N - 1);
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+  const niceStep = (span) => { const raw = span / 4, p = Math.pow(10, Math.floor(Math.log10(raw))); const m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; };
+
+  function axes(svg, H, lo, hi, padT, padB) {
+    const yOf = (v) => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+    const step = niceStep(hi - lo);
+    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
+      svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: yOf(v), y2: yOf(v), style: "stroke: var(--line); stroke-width: 1" }));
+      svg.appendChild(el("text", { x: PADL - 6, y: yOf(v) + 4, "text-anchor": "end", style: "fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums" }, String(Math.round(v))));
+    }
+    return yOf;
+  }
+  function timeAxis(svg, H, padB) {
+    const obsX = (xOf(OBS - 1) + xOf(OBS)) / 2;
+    svg.appendChild(el("rect", { x: PADL, y: 4, width: obsX - PADL, height: H - padB - 4, style: "fill: var(--accent-tint); opacity: .55" }));
+    for (const f of [0, 10, 20, 30, 40, 50, 59]) {
+      svg.appendChild(el("text", { x: xOf(f), y: H - 6, "text-anchor": "middle", style: "fill: var(--muted); font-size: 11px" }, f === 0 ? "第 0 帧" : (f / 20).toFixed(1) + " s"));
+    }
+    svg.appendChild(el("text", { x: (PADL + obsX) / 2, y: 18, "text-anchor": "middle", style: "fill: var(--accent); font-size: 11px" }, "观测"));
+  }
+  const pathOf = (vals, yOf) => vals.map((v, t) => (t ? "L" : "M") + xOf(t).toFixed(1) + "," + yOf(v).toFixed(1)).join(" ");
+
+  function render() {
+    const s = SERIES[si], x = s.x, c = dct(x), xh = idct(c, K), r = x.map((v, t) => v - xh[t]);
+    // ① 信号
+    const sig = $("c-signal"); sig.replaceChildren();
+    let lo = Math.min(...x, ...xh), hi = Math.max(...x, ...xh); const m = (hi - lo) * 0.08 + 2; lo -= m; hi += m;
+    timeAxis(sig, 230, 22);
+    const y1 = axes(sig, 230, lo, hi, 8, 22);
+    sig.appendChild(el("path", { d: pathOf(x, y1), style: "fill: none; stroke: var(--raw); stroke-width: 1.4" }));
+    x.forEach((v, t) => sig.appendChild(el("circle", { cx: xOf(t), cy: y1(v), r: 1.8, style: "fill: var(--raw)" })));
+    sig.appendChild(el("path", { d: pathOf(xh, y1), style: "fill: none; stroke: var(--accent); stroke-width: 2.4" }));
+    // ② 残差：与①同一纵向比例尺的跨度，便于看出量级
+    const res = $("c-resid"); res.replaceChildren();
+    const ra = Math.max(4, ...r.map(Math.abs)) * 1.1;
+    timeAxis(res, 130, 22);
+    const y2 = axes(res, 130, -ra, ra, 8, 22);
+    res.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: y2(0), y2: y2(0), style: "stroke: var(--muted); stroke-width: 1" }));
+    res.appendChild(el("path", { d: pathOf(r, y2), style: "fill: none; stroke: var(--cut); stroke-width: 1.6" }));
+    // ③ 频谱（对数）
+    const sp = $("c-spec"); sp.replaceChildren();
+    const H = 190, padT = 10, padB = 36, e = c.map((v) => v * v);
+    const lg = e.map((v) => Math.log10(v + 1e-3));
+    const top = Math.ceil(Math.max(...lg)), bot = Math.max(top - 7, Math.floor(Math.min(...lg)));
+    const ys = (v) => padT + (H - padT - padB) * (1 - (Math.max(v, bot) - bot) / (top - bot));
+    for (let d = bot; d <= top; d++) {
+      sp.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: ys(d), y2: ys(d), style: "stroke: var(--line); stroke-width: 1" }));
+      sp.appendChild(el("text", { x: PADL - 6, y: ys(d) + 4, "text-anchor": "end", style: "fill: var(--muted); font-size: 11px" }, "1e" + d));
+    }
+    const bw = (W - PADL - PADR) / N;
+    lg.forEach((v, k) => sp.appendChild(el("rect", { x: PADL + k * bw + 1, y: ys(v), width: Math.max(1, bw - 2), height: H - padB - ys(v), style: "fill: " + (k < K ? "var(--accent)" : "var(--cut)") + "; opacity: " + (k < K ? 1 : 0.75) })));
+    const cutX = PADL + K * bw;
+    sp.appendChild(el("line", { x1: cutX, x2: cutX, y1: padT - 4, y2: H - padB, style: "stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 4 3" }));
+    for (const k of [0, 6, 12, 18, 24, 30, 36, 42, 48, 54]) {
+      sp.appendChild(el("text", { x: PADL + (k + 0.5) * bw, y: H - padB + 14, "text-anchor": "middle", style: "fill: var(--muted); font-size: 11px" }, "k=" + k));
+      sp.appendChild(el("text", { x: PADL + (k + 0.5) * bw, y: H - padB + 28, "text-anchor": "middle", style: "fill: var(--muted); font-size: 10.5px" }, (k / 6).toFixed(0) + " Hz"));
+    }
+    // 数字
+    const total = e.slice(1).reduce((a, b) => a + b, 0), cut = e.slice(K).reduce((a, b) => a + b, 0);
+    $("kval").textContent = "K = " + K;
+    $("s-f").textContent = ((K - 1) / 6).toFixed(2) + " Hz";
+    $("s-e").textContent = (K >= N ? 0 : 100 * cut / total).toFixed(1) + "%";
+    $("s-r").textContent = Math.sqrt(cut / N).toFixed(1) + " mm";
+    $("s-range").textContent = Math.round(Math.max(...x) - Math.min(...x)) + " mm";
+    $("series-note").textContent = s.note;
+    document.querySelectorAll(".preset").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.k) === K)));
+  }
+
+  const btns = $("series-btns");
+  SERIES.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = s.name; b.setAttribute("aria-pressed", String(i === si));
+    b.addEventListener("click", () => { si = i; btns.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === si))); render(); });
+    btns.appendChild(b);
+  });
+  $("k").addEventListener("input", (e) => { K = Number(e.target.value); render(); });
+  document.querySelectorAll(".preset").forEach((b) => b.addEventListener("click", () => { K = Number(b.dataset.k); $("k").value = K; render(); }));
+  render();
+})();
+</script>

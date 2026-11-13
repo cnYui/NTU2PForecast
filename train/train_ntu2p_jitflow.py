@@ -32,6 +32,8 @@ from train.train_ntu2p_v2 import (
     old_scale_starts,
 )
 from utils.fixseed import fixseed
+from utils.ntu2p_canonical import estimate_up
+from utils.ntu2p_kinematic_projection import foot_contact_mask, foot_horizontal_velocity
 from utils.ntu2p_contact_graph import contact_distance_loss
 from utils.ntu_smplx_2p_xyz import XYZ_COORD_DIM, copy_last_xyz
 
@@ -55,6 +57,12 @@ def check_args(args):
         raise ValueError("--sc_prob 必须在 [0,1]")
     if args.flow_recipe_weight < 0 or not 0.0 <= args.flow_recipe_t_min < 1.0:
         raise ValueError("--flow_recipe_weight 须 ≥ 0，--flow_recipe_t_min 须在 [0,1)")
+    if args.foot_terms_branch == "flow" and args.flow_recipe_weight <= 0:
+        raise ValueError("--foot_terms_branch flow 需要高 t 配方分支（--flow_recipe_weight > 0）")
+    if (args.foot_contact_bce_weight > 0 or args.foot_self_lock_weight > 0) and not json.loads(args.flow_kwargs).get("contact_head"):
+        raise ValueError("着地标签/自洽锁脚损失需要 --flow_kwargs 里开启 contact_head")
+    if args.foot_self_lock_weight > 0 and args.foot_loss_weight <= 0:
+        raise ValueError("自洽锁脚损失借用脚接触损失的归一化常数，需要 --foot_loss_weight > 0")
 
 
 def estimate_coef_scales(args, cache, model_kwargs, device):
@@ -173,14 +181,72 @@ def estimate_interaction_scales(args, cache):
     return OrderedDict((name, max(value / count, 1e-8)) for name, value in sums.items())
 
 
-def recipe_loss(model, prep, root, local, obs_xyz, target_xyz, args, loss_args, scales):
-    """归一化系数 x̂ 解码后施加 FD2 完整损失配方（另加可选的交互损失）。"""
+def contact_terms(model, pred, obs_xyz, target_xyz, args, scales):
+    """着地标签损失与自洽锁脚损失：{名称: (权重, 原始值, 归一化常数)}。
+
+    着地概率来自本次去噪的腿流（model.last_contact_logits），须在 denoise 之后立即调用。
+    锁脚项的着地概率截断梯度：否则最省力的降损方式是把概率压低，而不是让模型判定为着地的脚停住。
+    """
+    logits = model.last_contact_logits
+    if logits is None:
+        raise RuntimeError("contact_head 未产生着地 logit：须在 denoise 之后计算")
+    terms = OrderedDict()
+    if args.foot_contact_bce_weight > 0:
+        label = foot_contact_mask(target_xyz, obs_xyz)
+        bce = torch.nn.functional.binary_cross_entropy_with_logits(logits, label)
+        terms["contact_bce"] = (float(args.foot_contact_bce_weight), bce, 1.0)
+    if args.foot_self_lock_weight > 0:
+        prob = torch.sigmoid(logits).detach()
+        speed_sq = foot_horizontal_velocity(pred, obs_xyz, estimate_up(obs_xyz)).pow(2).sum(dim=-1)  # [B,T,2,4]
+        lock = (prob * speed_sq).sum() / prob.sum().clamp_min(1.0)
+        scale = float(scales["foot"]) if scales is not None else 1.0
+        terms["self_lock"] = (float(args.foot_self_lock_weight), lock, scale)
+    if args.foot_swing_weight > 0:
+        terms["swing"] = (float(args.foot_swing_weight), swing_velocity_loss(pred, obs_xyz, target_xyz), float(args.foot_swing_scale))
+    return terms
+
+
+def swing_velocity_loss(pred, obs_xyz, target_xyz):
+    """GT 摆动（非着地）帧上预测脚与 GT 脚水平速度之差的平方均值：教模型该迈步时迈出去。"""
+    up = estimate_up(obs_xyz)
+    swing = 1.0 - foot_contact_mask(target_xyz, obs_xyz)  # [B,T,2,4]
+    diff = foot_horizontal_velocity(pred, obs_xyz, up) - foot_horizontal_velocity(target_xyz, obs_xyz, up)
+    return (swing * diff.pow(2).sum(dim=-1)).sum() / swing.sum().clamp_min(1.0)
+
+
+def estimate_swing_scale(args, cache):
+    """copy-last（脚不动）在 train 上的摆动项值作归一化常数，窗口与 _estimate_scales 相同。"""
+    window_len = args.obs_len + args.pred_len
+    seq_index = torch.arange(len(cache), dtype=torch.long)
+    start = old_scale_starts(cache, args.seed, window_len)
+    total, count = 0.0, 0
+    with torch.no_grad():
+        for begin in range(0, len(cache), args.eval_batch_size):
+            end = min(begin + args.eval_batch_size, len(cache))
+            window = cache.gather_windows(seq_index[begin:end], start[begin:end], window_len)
+            obs, target = window[:, : args.obs_len], window[:, args.obs_len :]
+            total += float(swing_velocity_loss(copy_last_xyz(obs, args.pred_len), obs, target).cpu().item()) * int(obs.shape[0])
+            count += int(obs.shape[0])
+    return max(total / count, 1e-8)
+
+
+def recipe_loss(model, prep, root, local, obs_xyz, target_xyz, args, loss_args, scales, branch="endpoint"):
+    """归一化系数 x̂ 解码后施加 FD2 完整损失配方（另加可选的交互、落脚损失）。
+
+    branch 为 endpoint（t=0）或 flow（高 t 配方分支）；落脚三项按 --foot_terms_branch 只加在指定分支。
+    """
     pred, free, delta = model.decode_xyz(prep, root, local)
     details = OrderedDict([("pred", pred), ("pred_free", free), ("delta", delta)])
     loss, delta_reg = _loss_terms(*(_loss_joints(value, args) for value in (pred, delta, target_xyz, obs_xyz)), loss_args, scales=scales)
     extra, values, weighted = _extra_loss(details, target_xyz, obs_xyz, args, scales)
     if extra is not None:
         loss = loss + extra
+    foot_on = args.foot_contact_bce_weight > 0 or args.foot_self_lock_weight > 0 or args.foot_swing_weight > 0
+    if foot_on and args.foot_terms_branch in ("both", branch):
+        for name, (weight, value, scale) in contact_terms(model, pred, obs_xyz, target_xyz, args, scales).items():
+            values[name] = value
+            weighted[name] = weight * value / scale
+            loss = loss + weighted[name]
     weights = interaction_weights(args)
     if weights:
         for name, value in interaction_terms(pred, target_xyz).items():
@@ -223,7 +289,7 @@ def recipe_flow_loss(model, prep, x_root, x_local, obs_xyz, target_xyz, args, lo
     z_local = t_local * x_local + (1.0 - t_local) * torch.randn_like(x_local)
     sc = _maybe_self_cond(model, prep, z_root, z_local, t, args)
     root, local = model.denoise(prep, z_root, z_local, t, sc=sc)
-    return recipe_loss(model, prep, root, local, obs_xyz, target_xyz, args, loss_args, scales)[0]
+    return recipe_loss(model, prep, root, local, obs_xyz, target_xyz, args, loss_args, scales, branch="flow")
 
 
 def run(args):
@@ -246,6 +312,8 @@ def run(args):
     args.loss_scales = loss_scales
     if interaction_weights(args):
         args.interaction_scales = estimate_interaction_scales(args, cache)
+    if args.foot_swing_weight > 0:
+        args.foot_swing_scale = estimate_swing_scale(args, cache)
     loss_args = _base_loss_args(args)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     args.num_params = count_parameters(model)
@@ -272,7 +340,7 @@ def run(args):
         loss_r = None
         # 权重为 0 时整支跳过：不多消耗随机数，旧配置的训练轨迹不变。
         if args.flow_recipe_weight > 0:
-            loss_r = recipe_flow_loss(model, prep, x_root, x_local, obs_xyz, target_xyz, args, loss_args, loss_scales)
+            loss_r, _, _, flow_values, flow_weighted = recipe_flow_loss(model, prep, x_root, x_local, obs_xyz, target_xyz, args, loss_args, loss_scales)
             loss = loss + float(args.flow_recipe_weight) * loss_r
         if not torch.isfinite(loss):
             raise ValueError("训练 loss 非有限")
@@ -300,6 +368,12 @@ def run(args):
         for name, value in extra_values.items():
             record[name] = float(value.detach().cpu().item())
             record[name + "_share"] = float((extra_weighted[name] / loss).detach().cpu().item())
+        if loss_r is not None:
+            # 落脚项只在高 t 分支时，端点日志里没有它们；单独记录分支内的值与占总 loss 的比例。
+            for name in ("contact_bce", "self_lock", "swing"):
+                if name in flow_values:
+                    record["flow_" + name] = float(flow_values[name].detach().cpu().item())
+                    record["flow_" + name + "_share"] = float((float(args.flow_recipe_weight) * flow_weighted[name] / loss).detach().cpu().item())
         if step == 1 or step % args.log_interval == 0:
             print("step[{}]: loss[{:.5f}] endpoint[{:.5f}] flow[{:.5f}]".format(step, record["train_loss"], record["endpoint_loss"], record["flow_loss"]), flush=True)
         if step % args.save_interval == 0 or step == args.num_steps:
@@ -334,6 +408,10 @@ def build_arg_parser():
     parser.add_argument("--flow_recipe_t_min", type=float, default=0.5, help="高 t 配方分支的 t ~ U(t_min, 1)")
     parser.add_argument("--contact_curve_weight", type=float, default=0.0, help="双向手—对方躯干距离曲线损失（copy-last 归一化）")
     parser.add_argument("--proximity_curve_weight", type=float, default=0.0, help="两人身体最近距离曲线损失（copy-last 归一化）")
+    parser.add_argument("--foot_contact_bce_weight", type=float, default=0.0, help="着地概率头对 GT 着地标签的二元交叉熵（需 contact_head）")
+    parser.add_argument("--foot_self_lock_weight", type=float, default=0.0, help="模型判定着地的帧上脚水平速度平方（与脚接触损失同一归一化）")
+    parser.add_argument("--foot_swing_weight", type=float, default=0.0, help="GT 摆动帧上预测脚与 GT 脚水平速度之差（copy-last 归一化）")
+    parser.add_argument("--foot_terms_branch", choices=("both", "flow"), default="both", help="落脚三项加在哪个分支：两者都加，或只加在高 t 配方分支")
     return parser
 
 
