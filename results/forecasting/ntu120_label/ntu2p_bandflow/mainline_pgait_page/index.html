@@ -1,0 +1,547 @@
+<title>NTU2P 主线与分数</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* 版式：单栏技术说明。先一句话 + 关键数字，再架构流程图（两条泳道：青绿=主体 BR，琥珀=步态模块），再训练分段、分数演进、步态小多图、完整表。 */
+:root {
+  --bg: #f3f6f5;
+  --surface: #ffffff;
+  --fg: #16201e;
+  --muted: #56645f;
+  --faint: #8b9894;
+  --line: #d5dedb;
+  --grid: #e4eae8;
+  --body: #0d7a71;
+  --body-soft: #e0f1ee;
+  --gait: #b25f0b;
+  --gait-soft: #fbeedc;
+  --fd2: #6f7d8c;
+  --old: #b3bfbc;
+  --font-text: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101514; --surface: #172020; --fg: #e3eae8; --muted: #9eaeaa; --faint: #6e7d79;
+    --line: #2b3735; --grid: #212b29; --body: #45b8ab; --body-soft: #12302c; --gait: #e8a14d;
+    --gait-soft: #36270f; --fd2: #8f9cab; --old: #4d5b58; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101514; --surface: #172020; --fg: #e3eae8; --muted: #9eaeaa; --faint: #6e7d79;
+  --line: #2b3735; --grid: #212b29; --body: #45b8ab; --body-soft: #12302c; --gait: #e8a14d;
+  --gait-soft: #36270f; --fd2: #8f9cab; --old: #4d5b58; color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 56px;
+}
+section { display: grid; gap: 18px; min-width: 0; }
+h1, h2, h3 { margin: 0; text-wrap: balance; line-height: 1.3; }
+h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: 0.01em; }
+h2 { font-size: 22px; font-weight: 700; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow {
+  font-size: 12px; letter-spacing: 0.12em; color: var(--muted); font-weight: 500;
+}
+.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.lede { color: var(--fg); font-size: 16px; }
+.note { color: var(--muted); font-size: 13.5px; }
+
+/* 时间轴：观测 10 帧 + 预测 50 帧，20 fps */
+.timeline { display: grid; gap: 6px; max-width: 640px; }
+.timeline .bar { display: grid; grid-template-columns: 10fr 50fr; height: 26px; border-radius: 4px; overflow: hidden; }
+.timeline .obs { background: var(--old); }
+.timeline .pred { background: repeating-linear-gradient(90deg, var(--gait-soft) 0 calc(10% - 1px), var(--surface) calc(10% - 1px) 10%); border: 1px solid var(--gait); border-left: 0; border-radius: 0 4px 4px 0; }
+.timeline .labels { display: grid; grid-template-columns: 10fr 50fr; font-size: 12.5px; color: var(--muted); }
+.timeline .labels span:last-child { padding-left: 8px; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+.kpi .label { font-size: 12.5px; color: var(--muted); }
+.kpi .value { font-family: var(--font-data); font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.kpi .sub { font-size: 12.5px; color: var(--muted); }
+.kpi .sub b { color: var(--fg); font-weight: 500; }
+@media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 架构图 */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.swatch { width: 16px; height: 12px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+.sw-body { background: var(--body-soft); border-color: var(--body); }
+.sw-gait { background: var(--gait-soft); border-color: var(--gait); }
+.sw-train { background: var(--surface); border-color: var(--faint); border-style: dashed; }
+.diagram-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.diagram-wrap svg { display: block; width: 100%; min-width: 780px; height: auto; }
+figure { margin: 0; display: grid; gap: 10px; }
+figcaption { font-size: 13.5px; color: var(--muted); max-width: 80ch; }
+
+svg .t { font-family: var(--font-text); font-size: 13.5px; font-weight: 700; fill: var(--fg); }
+svg .s { font-family: var(--font-text); font-size: 11.5px; fill: var(--muted); }
+svg .m { font-family: var(--font-data); font-size: 11px; fill: var(--muted); }
+svg .lane-b { font-family: var(--font-text); font-size: 14px; font-weight: 700; fill: var(--body); }
+svg .lane-g { font-family: var(--font-text); font-size: 14px; font-weight: 700; fill: var(--gait); }
+svg .lbl { font-family: var(--font-text); font-size: 11.5px; fill: var(--muted); }
+svg .box-io { fill: var(--surface); stroke: var(--fg); stroke-width: 1.4; }
+svg .box-b { fill: var(--body-soft); stroke: var(--body); stroke-width: 1.4; }
+svg .box-b-strong { fill: var(--body-soft); stroke: var(--body); stroke-width: 2.4; }
+svg .box-g { fill: var(--gait-soft); stroke: var(--gait); stroke-width: 1.4; }
+svg .box-train { fill: var(--surface); stroke: var(--faint); stroke-width: 1.4; stroke-dasharray: 6 4; }
+svg .loop { fill: none; stroke: var(--body); stroke-width: 1.4; stroke-dasharray: 7 5; }
+svg .flow { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+svg .flow-b { fill: none; stroke: var(--body); stroke-width: 1.8; }
+svg .flow-g { fill: none; stroke: var(--gait); stroke-width: 1.8; }
+svg .flow-train { fill: none; stroke: var(--faint); stroke-width: 1.5; stroke-dasharray: 6 4; }
+svg .head { fill: var(--muted); }
+svg .head-b { fill: var(--body); }
+svg .head-g { fill: var(--gait); }
+svg .head-train { fill: var(--faint); }
+svg .tag { fill: var(--surface); stroke: var(--faint); stroke-width: 1; }
+
+/* 训练分段 */
+.stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stage { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--gait); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.stage.body { border-top-color: var(--body); }
+.stage .kicker { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+.stage ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13.5px; }
+.stage .steps { font-family: var(--font-data); font-size: 12.5px; color: var(--muted); }
+@media (max-width: 900px) { .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .stages { grid-template-columns: 1fr; } }
+
+/* 条形图（HTML 实现，窄屏可读） */
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 14px; display: grid; gap: 10px; min-width: 0; }
+.chart-title { font-size: 14px; font-weight: 700; }
+.chart-sub { font-size: 12.5px; color: var(--muted); }
+.rows { display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: minmax(150px, 30%) minmax(0, 1fr) 64px; align-items: center; gap: 12px; }
+.row .name { font-size: 13px; line-height: 1.35; min-width: 0; }
+.row .name small { display: block; font-size: 11.5px; color: var(--muted); }
+.row.current .name { font-weight: 700; }
+.track { position: relative; height: 20px; }
+.track .fill { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 0 4px 4px 0; }
+.val { font-family: var(--font-data); font-size: 12.5px; font-variant-numeric: tabular-nums; text-align: right; }
+.row.current .val { font-weight: 500; }
+.axis { display: grid; grid-template-columns: minmax(150px, 30%) minmax(0, 1fr) 64px; gap: 12px; }
+.axis .ticks { position: relative; height: 18px; border-top: 1px solid var(--line); }
+.axis .ticks span { position: absolute; top: 2px; transform: translateX(-50%); font-family: var(--font-data); font-size: 11px; color: var(--faint); }
+.gridlines { position: absolute; inset: 0; pointer-events: none; }
+.gridlines i { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--grid); }
+.gt-line { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 1.5px dashed var(--fg); }
+.gt-tag { position: absolute; top: -20px; transform: translateX(-50%); font-family: var(--font-data); font-size: 11px; color: var(--fg); white-space: nowrap; background: var(--surface); padding: 0 3px; }
+
+.c-old { background: var(--old); }
+.c-fd2 { background: var(--fd2); }
+.c-br { background: var(--body); }
+.c-cur { background: var(--gait); }
+
+.multiples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.multiples .row, .multiples .axis { grid-template-columns: 76px minmax(0, 1fr) 56px; gap: 10px; }
+.multiples .rows { padding-top: 16px; }
+@media (max-width: 760px) { .multiples { grid-template-columns: 1fr; } }
+@media (max-width: 520px) {
+  .row, .axis { grid-template-columns: 110px minmax(0, 1fr) 56px; gap: 8px; }
+}
+
+.series-key { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.series-key span { display: inline-flex; align-items: center; gap: 6px; }
+.series-key i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.series-key .gt { width: 0; height: 14px; border-left: 1.5px dashed var(--fg); border-radius: 0; }
+
+.callouts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.callout { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.callout .big { font-family: var(--font-data); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.callout .big.up { color: var(--gait); }
+.callout .big.down { color: var(--body); }
+.callout p { font-size: 13.5px; color: var(--muted); }
+@media (max-width: 760px) { .callouts { grid-template-columns: 1fr; } }
+
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 13px; }
+th, td { padding: 9px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+thead th { font-weight: 500; color: var(--muted); font-size: 12px; vertical-align: bottom; }
+thead th small { display: block; color: var(--faint); font-weight: 400; }
+td { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--font-text); }
+td .pm { color: var(--faint); font-size: 11.5px; }
+tr.cur td { background: var(--gait-soft); }
+tr.cur td:first-child { background: var(--gait-soft); font-weight: 700; }
+tr.gt td { color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+
+.limits { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 80ch; }
+.limits li { font-size: 14.5px; }
+.limits b { font-weight: 500; }
+footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 18px; }
+footer code { font-family: var(--font-data); font-size: 11.5px; word-break: break-all; }
+</style>
+
+<main class="page">
+
+<header style="display:grid;gap:20px">
+  <div style="display:grid;gap:10px">
+    <div class="eyebrow">NTU120 双人动作预测 · 2026-11-07 起的主线</div>
+    <h1>BR:ode0 + 相位步态模块 PGait v4b</h1>
+    <p class="lede">给模型看两个人 0.5 秒的动作和动作类别，让它预测接下来 2.5 秒里两人 55 个关节的位置。主体扩散模型 BR 预测身体怎么移动，步态模块 PGait 让腿按步态相位一步一步迈出去。两部分都靠训练学出来，评价时不加任何规则后处理。</p>
+  </div>
+  <div class="timeline" aria-label="时间轴：观测 10 帧 0.5 秒，预测 50 帧 2.5 秒，20 fps">
+    <div class="bar"><div class="obs"></div><div class="pred"></div></div>
+    <div class="labels"><span>观测 10 帧</span><span>预测 50 帧 · 2.5 s（20 fps，每格 5 帧）</span></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><span class="label">test mpjpe（米）</span><span class="value">0.1799</span><span class="sub">比复制末帧 <b>−39.2%</b></span></div>
+    <div class="kpi"><span class="label">脚滑行帧比</span><span class="value">0.035</span><span class="sub">GT <b>0.030</b> · 上一版 0.194</span></div>
+    <div class="kpi"><span class="label">每窗平均步数</span><span class="value">2.09</span><span class="sub">GT <b>2.19</b> · 上一版 1.38</span></div>
+    <div class="kpi"><span class="label">参数量</span><span class="value">5.5M</span><span class="sub">主体 4.57M + 步态 0.92M</span></div>
+  </div>
+  <p class="note">数字都是原协议 test（1253 个窗口）上 3 个 seed 的均值。"上一版"指不加步态模块的 BR:ode0。</p>
+</header>
+
+<section aria-labelledby="arch">
+  <h2 id="arch">架构流程</h2>
+  <p>左边是主体 BR：一个在 DCT 系数上做扩散的模型，从 z = 0 出发确定性地走 20 步，得到全身 50 帧。右边是步态模块：它读取主体给出的骨盆速度，先预测每条腿的步态相位，再由相位生成腿的骨方向，从主体的髋往下接出膝、踝、脚掌。</p>
+  <div class="legend">
+    <span><i class="swatch sw-body"></i>主体 BR（扩散）</span>
+    <span><i class="swatch sw-gait"></i>步态模块 PGait</span>
+    <span><i class="swatch sw-train"></i>只在训练时使用</span>
+  </div>
+  <figure>
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 1000 1256" role="img" aria-label="当前主线架构流程：输入经场景规范化进入主体 BR 的 20 步扩散采样循环，解码并骨架投影后得到全身；主体的骨盆速度和髋位置送入步态模块，相位预测器给出步态相位，步态解码器生成骨方向，经观测锚定和 FK 得到膝、踝、脚掌；两部分组装后输出未来 50 帧，不加后处理。">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0 L10 5 L0 10 z"/></marker>
+          <marker id="ah-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-b" d="M0 0 L10 5 L0 10 z"/></marker>
+          <marker id="ah-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-g" d="M0 0 L10 5 L0 10 z"/></marker>
+          <marker id="ah-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-train" d="M0 0 L10 5 L0 10 z"/></marker>
+        </defs>
+
+        <!-- 输入 -->
+        <rect class="box-io" x="200" y="14" width="600" height="58" rx="8"/>
+        <text class="t" x="500" y="38" text-anchor="middle">输入：两人观测 10 帧 + 动作类别</text>
+        <text class="m" x="500" y="59" text-anchor="middle">obs_xyz [B,10,2,55,3]（相机系，米）· action [B]（26 类）</text>
+
+        <!-- 泳道标题 -->
+        <text class="lane-b" x="40" y="106">主体 BR · 扩散模型（4.57M）</text>
+        <text class="lane-g" x="585" y="106">步态模块 PGait v4b（推理 0.92M）</text>
+
+        <!-- 主体 -->
+        <path class="flow" d="M270 72 V116" marker-end="url(#ah)"/>
+        <rect class="box-b" x="70" y="120" width="400" height="50" rx="7"/>
+        <text class="t" x="270" y="141" text-anchor="middle">场景规范化</text>
+        <text class="s" x="270" y="160" text-anchor="middle">转到两人场景系；B 绕竖直轴转 180°，"走向对方"两人同号</text>
+        <path class="flow-b" d="M270 170 V196" marker-end="url(#ah-b)"/>
+
+        <rect class="loop" x="40" y="200" width="500" height="380" rx="12"/>
+        <text class="t" x="58" y="223">扩散采样循环 · Heun 20 步（39 次前向）</text>
+        <text class="s" x="58" y="242">从 z = 0 出发（温度 τ = 0，结果确定），t 从 0 走到 1</text>
+
+        <rect class="box-b" x="70" y="256" width="400" height="46" rx="7"/>
+        <text class="t" x="270" y="275" text-anchor="middle">状态 z</text>
+        <text class="s" x="270" y="293" text-anchor="middle">root DCT 8 阶 + 局部 DCT 11 阶（只保留 ≤ 2 Hz）</text>
+        <path class="flow-b" d="M270 302 V315" marker-end="url(#ah-b)"/>
+
+        <rect class="box-b" x="70" y="318" width="400" height="46" rx="7"/>
+        <text class="t" x="270" y="337" text-anchor="middle">z 和观测编码成 120 个时空 token</text>
+        <text class="s" x="270" y="355" text-anchor="middle">2 人 × 5 个部位 × 12 个 5 帧块</text>
+        <path class="flow-b" d="M270 364 V377" marker-end="url(#ah-b)"/>
+
+        <rect class="box-b" x="70" y="380" width="400" height="46" rx="7"/>
+        <text class="t" x="270" y="399" text-anchor="middle">STG 时空 Transformer × 6</text>
+        <text class="s" x="270" y="417" text-anchor="middle">宽 192 · 4 头 · 自条件；动作类别和 t 经 adaLN 进入</text>
+        <path class="flow-b" d="M270 426 V439" marker-end="url(#ah-b)"/>
+
+        <rect class="box-b" x="70" y="442" width="400" height="46" rx="7"/>
+        <text class="t" x="270" y="461" text-anchor="middle">部位输出头 → 最小二乘投回 DCT，得到 x̂</text>
+        <text class="s" x="270" y="479" text-anchor="middle">x̂ 是对干净结果的直接估计（JiT x 预测）</text>
+        <path class="flow-b" d="M270 488 V501" marker-end="url(#ah-b)"/>
+
+        <rect class="box-b" x="70" y="504" width="400" height="46" rx="7"/>
+        <text class="t" x="270" y="523" text-anchor="middle">腿部专用流替换腿的系数</text>
+        <text class="s" x="270" y="541" text-anchor="middle">在每个人自己的朝向系里预测腿</text>
+
+        <path class="flow-b" d="M470 527 H506 V279 H474" marker-end="url(#ah-b)"/>
+        <text class="lbl" x="522" y="403" text-anchor="middle" transform="rotate(90 522 403)">Heun 更新 z，重复 20 步</text>
+
+        <path class="flow-b" d="M270 550 V603" marker-end="url(#ah-b)"/>
+        <rect class="box-b" x="70" y="606" width="400" height="50" rx="7"/>
+        <text class="t" x="270" y="627" text-anchor="middle">IDCT × ramp 解码 → 组装 55 关节</text>
+        <text class="s" x="270" y="646" text-anchor="middle">刚体手：手指 = 手腕 + 手部整体旋转</text>
+        <path class="flow-b" d="M270 656 V671" marker-end="url(#ah-b)"/>
+
+        <rect class="box-b" x="70" y="674" width="400" height="50" rx="7"/>
+        <text class="t" x="270" y="695" text-anchor="middle">旋回相机系，接上观测末帧 → 骨架投影</text>
+        <text class="s" x="270" y="714" text-anchor="middle">每段骨长保持和观测一致</text>
+        <path class="flow-b" d="M270 724 V739" marker-end="url(#ah-b)"/>
+
+        <rect class="box-b-strong" x="70" y="742" width="400" height="50" rx="7"/>
+        <text class="t" x="270" y="763" text-anchor="middle">主体结果：50 帧全身</text>
+        <text class="s" x="270" y="782" text-anchor="middle">保留 root 轨迹、髋、躯干、手臂和头</text>
+
+        <!-- 主体 → 步态模块 -->
+        <path class="flow-b" d="M470 767 H582" marker-end="url(#ah-b)"/>
+        <text class="lbl" x="527" y="760" text-anchor="middle">骨盆速度</text>
+        <text class="lbl" x="527" y="784" text-anchor="middle">髋位置</text>
+
+        <!-- 观测腿姿 → 步态模块 -->
+        <path class="flow" d="M800 43 H975 V788 H948" marker-end="url(#ah)"/>
+        <text class="lbl" x="988" y="420" text-anchor="middle" transform="rotate(90 988 420)">观测 10 帧腿姿、动作类别</text>
+
+        <!-- 训练用：周期自编码器 -->
+        <rect class="box-train" x="585" y="200" width="360" height="124" rx="8"/>
+        <text class="t" x="603" y="225">周期自编码器 PAE（0.10M）</text>
+        <rect class="tag" x="827" y="210" width="102" height="21" rx="10"/>
+        <text class="lbl" x="878" y="225" text-anchor="middle">只在训练时用</text>
+        <text class="s" x="603" y="250">真实腿部动作 → 4 条潜在周期曲线</text>
+        <text class="s" x="603" y="270">FFT 得到频率 f、振幅 a、偏置 b，再算出相位 ψ</text>
+        <text class="m" x="603" y="292">曲线 = a · sin 2π(f·t + ψ) + b</text>
+        <text class="s" x="603" y="313">窗口 41 帧，逐帧给出真实步态相位</text>
+
+        <path class="flow-train" d="M765 324 V738" marker-end="url(#ah-t)"/>
+        <text class="lbl" x="776" y="520">训练时给出真实相位：</text>
+        <text class="lbl" x="776" y="538">监督 F，并直接喂给 G</text>
+
+        <rect class="box-g" x="585" y="742" width="360" height="92" rx="7"/>
+        <text class="t" x="603" y="764">相位预测器 F（0.51M）</text>
+        <text class="s" x="603" y="785">输入：观测腿姿、主体给的未来骨盆速度、动作</text>
+        <text class="s" x="603" y="804">输出：当前相位 ψ₀，未来 f、a、b（DCT 8 阶）</text>
+        <text class="s" x="603" y="823">ψ = ψ₀ + ∫ f dt；频率恒为正，相位只往前走</text>
+        <path class="flow-g" d="M765 834 V851" marker-end="url(#ah-g)"/>
+
+        <rect class="box-g" x="585" y="854" width="360" height="92" rx="7"/>
+        <text class="t" x="603" y="876">步态解码器 G（0.41M）</text>
+        <text class="s" x="603" y="897">每帧输入：相位向量、骨盆速度、腿长、动作、</text>
+        <text class="s" x="603" y="915">骨盆离观测地面的高度、观测末帧腿姿</text>
+        <text class="s" x="603" y="934">输出：6 段骨方向（每腿 3 段）+ 4 个着地概率</text>
+        <path class="flow-g" d="M765 946 V961" marker-end="url(#ah-g)"/>
+
+        <rect class="box-g" x="585" y="964" width="360" height="50" rx="7"/>
+        <text class="t" x="765" y="985" text-anchor="middle">观测锚定</text>
+        <text class="s" x="765" y="1004" text-anchor="middle">开头几帧向观测末帧腿姿靠拢，差值按 exp(−Δt/4 帧) 衰减</text>
+        <path class="flow-g" d="M765 1014 V1029" marker-end="url(#ah-g)"/>
+
+        <rect class="box-g" x="585" y="1032" width="360" height="50" rx="7"/>
+        <text class="t" x="765" y="1053" text-anchor="middle">从主体的髋往下做 FK</text>
+        <text class="s" x="765" y="1072" text-anchor="middle">骨长取观测末帧 → 膝、踝、脚掌</text>
+
+        <!-- 组装与输出 -->
+        <path class="flow-b" d="M270 792 V1111" marker-end="url(#ah-b)"/>
+        <path class="flow-g" d="M765 1082 V1111" marker-end="url(#ah-g)"/>
+        <rect class="box-io" x="40" y="1114" width="905" height="52" rx="8"/>
+        <text class="t" x="492" y="1136" text-anchor="middle">组装</text>
+        <text class="s" x="492" y="1155" text-anchor="middle">主体的 root、髋、上半身 + 步态模块的膝、踝、脚掌（2 人 × 2 条腿，共 12 个关节）</text>
+        <path class="flow" d="M492 1166 V1185" marker-end="url(#ah)"/>
+        <rect class="box-io" x="200" y="1188" width="600" height="58" rx="8"/>
+        <text class="t" x="500" y="1212" text-anchor="middle">输出：两人未来 50 帧（2.5 s）</text>
+        <text class="m" x="500" y="1233" text-anchor="middle">pred_xyz [B,50,2,55,3] · 不加任何后处理</text>
+      </svg>
+    </div>
+    <figcaption>虚线框里的周期自编码器只在训练时提供"真实步态相位"，推理时不运行。步态模块替换的是主体原来的腿：主体预测的腿会被平均成"脚跟着骨盆滑"，步态模块用相位把"支撑时脚停住、摆动时快速迈出"的形状生成出来。</figcaption>
+  </figure>
+</section>
+
+<section aria-labelledby="train">
+  <h2 id="train">怎么训练</h2>
+  <p>主体和步态模块分开训练，都只用 train split。步态模块的三段按顺序训练，每个 seed 合计约 10 分钟。</p>
+  <div class="stages">
+    <div class="stage body">
+      <div class="kicker">主体 BR</div>
+      <h3>扩散模型</h3>
+      <div class="steps">10000 step · EMA 0.999 取终点</div>
+      <ul>
+        <li>JiT 流：x 预测 + v-loss，状态是正交 ramp-DCT 系数</li>
+        <li>端点配方损失（骨架、脚接触、腿步态、频带幅度）</li>
+        <li>高 t 配方分支：t ∈ [0.5, 1] 时把 x̂ 解码后加同一套配方</li>
+      </ul>
+    </div>
+    <div class="stage">
+      <div class="kicker">步态 · 第 1 段</div>
+      <h3>周期自编码器 PAE</h3>
+      <div class="steps">4000 step</div>
+      <ul>
+        <li>重建真实腿部动作特征（MSE）</li>
+        <li>学到的潜在曲线是周期的，相位从中直接读出</li>
+      </ul>
+    </div>
+    <div class="stage">
+      <div class="kicker">步态 · 第 2 段</div>
+      <h3>步态解码器 G</h3>
+      <div class="steps">6000 step · 输入真实相位</div>
+      <ul>
+        <li>腿关节距离 + 防滑 0.2 + 着地 BCE 0.05 + 穿地 10</li>
+        <li>髋下降增强：一半样本把髋压低 0–12 cm，教它屈膝落地</li>
+      </ul>
+    </div>
+    <div class="stage">
+      <div class="kicker">步态 · 第 3 段</div>
+      <h3>相位预测器 F</h3>
+      <div class="steps">12000 step · G 冻结</div>
+      <ul>
+        <li>圆周相位 + 量值 + 自洽支撑 0.2 + 观测重建 1.0 + 腿部 L2 × 3（经 G）</li>
+        <li>速度增强：一半样本把骨盆速度低通、缩到 0.6–1.0 倍再加噪，模仿主体给的速度</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="scores">
+  <h2 id="scores">分数怎么提升的</h2>
+  <p>同一个 test 集上，各代主线的 mpjpe（越低越好）。前几代主要在降误差；后两代的重点是让动作看起来对：先换成扩散主体，再让腿真正迈步。</p>
+  <figure class="chart" aria-labelledby="hist-title">
+    <div class="chart-title" id="hist-title">各代主线的 test mpjpe（米）</div>
+    <div class="rows" id="hist"></div>
+    <div class="axis"><span></span><div class="ticks" id="hist-axis"></div><span></span></div>
+    <figcaption>从复制末帧的 0.2960 降到 0.1799（−39.2%）。最后三代差距都在 1% 以内：当前主线比 FD2 低 0.35%，比不加步态模块的 BR:ode0 高 0.46%，这部分是让腿迈步的代价。</figcaption>
+  </figure>
+
+  <h3 style="margin-top:12px">脚和步态：这一版的主要提升</h3>
+  <div class="series-key" aria-hidden="true">
+    <span><i class="c-fd2"></i>FD2（上上代）</span>
+    <span><i class="c-br"></i>BR:ode0（上一版）</span>
+    <span><i class="c-cur"></i>当前主线</span>
+    <span><i class="gt"></i>真实动作 GT</span>
+  </div>
+  <div class="multiples" id="gait"></div>
+
+  <div class="callouts">
+    <div class="callout"><span class="big down">−82%</span><p>脚滑行帧比 0.194 → 0.035，和真实动作的 0.030 几乎一样。</p></div>
+    <div class="callout"><span class="big down">+52%</span><p>每窗平均步数 1.38 → 2.09，真实动作是 2.19。</p></div>
+    <div class="callout"><span class="big up">+0.46%</span><p>mpjpe 0.1791 → 0.1799，逐 seed 为 +0.52% / +0.42% / +0.45%。</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="table">
+  <h2 id="table">完整指标</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>方法</th>
+          <th>mpjpe<small>越低越好</small></th>
+          <th>xyz_mse</th>
+          <th>xyz_mae</th>
+          <th>滑行帧比<small>越低越好</small></th>
+          <th>步数<small>接近 GT</small></th>
+          <th>左右交替<small>接近 GT</small></th>
+          <th>站立占比<small>接近 GT</small></th>
+          <th>穿地<small>越低越好</small></th>
+          <th>jerk<small>护栏 ≤ 24.5</small></th>
+          <th>1.2–2 Hz 摆动<small>相对 GT</small></th>
+          <th>接触前超额后退</th>
+          <th>漏接触</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>FD2（上上代）</td><td>0.1805 <span class="pm">±.0005</span></td><td>0.0277</td><td>0.0875</td><td>0.203 <span class="pm">±.003</span></td><td>1.46 <span class="pm">±.03</span></td><td>—</td><td>—</td><td>0.041</td><td>20.7</td><td>0.60</td><td>0.036</td><td>404</td></tr>
+        <tr><td>BR:ode0（上一版）</td><td>0.1791 <span class="pm">±.0006</span></td><td>0.0289</td><td>0.0865</td><td>0.194 <span class="pm">±.020</span></td><td>1.38 <span class="pm">±.01</span></td><td>−0.10 <span class="pm">±.02</span></td><td>0.409</td><td>0.038</td><td>15.9</td><td>0.22</td><td>0.039</td><td>479</td></tr>
+        <tr class="cur"><td>BR:ode0 + PGait v4b（当前）</td><td>0.1799 <span class="pm">±.0005</span></td><td>0.0290</td><td>0.0869</td><td>0.035 <span class="pm">±.002</span></td><td>2.09 <span class="pm">±.04</span></td><td>−0.30 <span class="pm">±.06</span></td><td>0.355</td><td>0.011</td><td>21.0</td><td>0.24</td><td>0.039</td><td>479</td></tr>
+        <tr class="gt"><td>真实动作 GT</td><td>—</td><td>—</td><td>—</td><td>0.030</td><td>2.19</td><td>−0.40</td><td>0.311</td><td>—</td><td>—</td><td>1</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">"—"表示该方法没有统计这一项。± 为 3 个 seed 的标准差，只标在有意义的列上。左右交替是左右脚前向速度的相关系数，越负越像交替迈步。</p>
+</section>
+
+<section aria-labelledby="limits">
+  <h2 id="limits">代价和还没解决的</h2>
+  <ul class="limits">
+    <li><b>mpjpe 没有降。</b>比 BR:ode0 高 0.46%。未来什么时候落脚本身不确定，迈出去的步子时机一错，L2 就比"平均成滑行"更大。</li>
+    <li><b>jerk 15.9 → 21.0。</b>迈步让腿的加速度变大，仍在护栏 24.5 以内，和 FD2 的 20.7 相当。</li>
+    <li><b>手臂摆动偏小。</b>1.2–2 Hz 摆动只有真实动作的 24%（FD2 是 60%）。步态模块只管腿。</li>
+    <li><b>交互没有变化。</b>接触前超额后退和漏接触都与 BR:ode0 相同；两人走错方向（如 test #010）是主体预测骨盆走向的问题。</li>
+    <li><b>训练和推理不完全一致。</b>步态模块训练时用真实骨盆，推理时接主体预测的骨盆，靠速度增强和髋下降增强缓解。</li>
+  </ul>
+</section>
+
+<footer>
+  <div>数据：原协议 test（1253 个窗口），3 个 seed（0/1/2）的均值；历代数字取自各代结果文档。</div>
+  <div>当前主线汇总 <code>results/forecasting/ntu120_label/ntu2p_jitflow/original/phase_gait_test/summary.json</code>；采纳记录 <code>docs/ai/context/20261107-114111-ntu2p-mainline-adoption-br-ode0-pgait-v4b.md</code></div>
+  <div>代码 <code>model/ntu2p_phase_gait.py</code> · <code>train/train_ntu2p_phase_gait.py</code> · <code>model/forecasting_ntu2p_jitflow.py</code>（github.com/cnYui/NTU2PForecast）</div>
+</footer>
+
+</main>
+
+<script>
+(function () {
+  // 历代主线 test mpjpe（原协议 1253 窗口）；来源见页脚与计划文档。
+  var history = [
+    { name: "copy-last", sub: "复制观测末帧，不学习", v: 0.29604, c: "c-old" },
+    { name: "独立单人模型", sub: "每人只看自己 · 08-22", v: 0.23974, c: "c-old" },
+    { name: "双人残差精修 + 摆动恢复", sub: "09-24", v: 0.19670, c: "c-old" },
+    { name: "+ 权重 EMA", sub: "09-24", v: 0.18816, c: "c-old" },
+    { name: "+ root 轨迹 DCT 头", sub: "09-25", v: 0.18455, c: "c-old" },
+    { name: "v2 端到端双人 DCT-Mixer", sub: "09-26", v: 0.18098, c: "c-old" },
+    { name: "FD2：v2 + 手指损失去重", sub: "09-26", v: 0.18052, c: "c-fd2" },
+    { name: "BR:ode0 扩散主体", sub: "11-04", v: 0.17906, c: "c-br" },
+    { name: "BR:ode0 + PGait v4b", sub: "11-07 · 当前主线", v: 0.17989, c: "c-cur", current: true }
+  ];
+  var hmax = 0.30;
+  var hist = document.getElementById("hist");
+  history.forEach(function (d) {
+    var row = document.createElement("div");
+    row.className = "row" + (d.current ? " current" : "");
+    row.title = d.name + "：" + d.v.toFixed(5);
+    row.innerHTML = '<div class="name">' + d.name + '<small>' + d.sub + '</small></div>' +
+      '<div class="track">' + grid([0.1, 0.2, 0.3], hmax) + '<div class="fill ' + d.c + '" style="width:' + (d.v / hmax * 100).toFixed(2) + '%"></div></div>' +
+      '<div class="val">' + d.v.toFixed(4) + '</div>';
+    hist.appendChild(row);
+  });
+  document.getElementById("hist-axis").innerHTML = [0, 0.1, 0.2, 0.3].map(function (t) {
+    return '<span style="left:' + (t / hmax * 100) + '%">' + t.toFixed(1) + '</span>';
+  }).join("");
+
+  function grid(ticks, max) {
+    return '<div class="gridlines">' + ticks.map(function (t) {
+      return '<i style="left:' + (t / max * 100).toFixed(2) + '%"></i>';
+    }).join("") + '</div>';
+  }
+
+  // 步态小多图：条长为数值（左右交替取绝对值），GT 为虚线。
+  var series = [["FD2", "c-fd2"], ["BR:ode0", "c-br"], ["当前", "c-cur"]];
+  var panels = [
+    { title: "脚滑行帧比", sub: "越低越好", vals: [0.2033, 0.1938, 0.0346], gt: 0.030, max: 0.22, ticks: [0, 0.1, 0.2], fmt: 3 },
+    { title: "每窗平均步数", sub: "越接近 GT 越好", vals: [1.4606, 1.3771, 2.0927], gt: 2.19, max: 2.4, ticks: [0, 1, 2], fmt: 2 },
+    { title: "左右脚交替（前向速度相关）", sub: "越负越像交替迈步；条长为绝对值，FD2 未统计", vals: [null, -0.1008, -0.3039], gt: -0.40, max: 0.45, ticks: [0, 0.2, 0.4], fmt: 2, abs: true },
+    { title: "脚穿地帧比", sub: "越低越好；GT 未统计", vals: [0.0413, 0.0376, 0.0109], gt: null, max: 0.045, ticks: [0, 0.02, 0.04], fmt: 3 }
+  ];
+  var gait = document.getElementById("gait");
+  panels.forEach(function (p) {
+    var box = document.createElement("figure");
+    box.className = "chart";
+    var html = '<div><div class="chart-title">' + p.title + '</div><div class="chart-sub">' + p.sub + '</div></div><div class="rows">';
+    p.vals.forEach(function (v, i) {
+      var len = v === null ? 0 : (p.abs ? Math.abs(v) : v);
+      var gtMark = "";
+      if (p.gt !== null) {
+        var gx = (p.abs ? Math.abs(p.gt) : p.gt) / p.max * 100;
+        gtMark = '<div class="gt-line" style="left:' + gx.toFixed(2) + '%"></div>' +
+          (i === 0 ? '<div class="gt-tag" style="left:' + gx.toFixed(2) + '%">GT ' + p.gt.toFixed(p.fmt) + '</div>' : "");
+      }
+      html += '<div class="row' + (i === 2 ? ' current' : '') + '" title="' + series[i][0] + '：' + (v === null ? '未统计' : v.toFixed(4)) + '">' +
+        '<div class="name">' + series[i][0] + '</div>' +
+        '<div class="track">' + grid(p.ticks.slice(1), p.max) + (v === null ? '' : '<div class="fill ' + series[i][1] + '" style="width:' + (len / p.max * 100).toFixed(2) + '%"></div>') + gtMark + '</div>' +
+        '<div class="val">' + (v === null ? '—' : v.toFixed(p.fmt)) + '</div></div>';
+    });
+    html += '</div><div class="axis"><span></span><div class="ticks">' + p.ticks.map(function (t) {
+      return '<span style="left:' + (t / p.max * 100).toFixed(2) + '%">' + (p.abs && t ? '−' : '') + t + '</span>';
+    }).join("") + '</div><span></span></div>';
+    box.innerHTML = html;
+    gait.appendChild(box);
+  });
+})();
+</script>
