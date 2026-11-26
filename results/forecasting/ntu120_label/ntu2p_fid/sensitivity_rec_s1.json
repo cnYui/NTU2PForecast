@@ -1,0 +1,48 @@
+{
+  "stage": "sensitivity",
+  "num_samples": 1253,
+  "num_splits": 100,
+  "noise_floor_p95": 10.328276260817518,
+  "variants": {
+    "S0_gt_vs_gt": {
+      "half_median": 7.4716456043169615,
+      "half_p05": 5.728711612050153,
+      "half_p95": 10.328276260817518
+    },
+    "S1_sliding_legs": {
+      "half_median": 10.022846031760537,
+      "half_p05": 8.203337329322233,
+      "half_p95": 12.969135582899417,
+      "full_fid": 2.8326301163826884,
+      "visible": false
+    },
+    "S2_jitter_1cm": {
+      "half_median": 7.501562443349826,
+      "half_p05": 5.935252393097312,
+      "half_p95": 10.32297569841371,
+      "full_fid": 0.100300064875114,
+      "visible": false
+    },
+    "S3_copy_last": {
+      "half_median": 297.33889106359095,
+      "half_p05": 283.983533130863,
+      "half_p95": 314.51289069510875,
+      "full_fid": 295.6426233288641,
+      "visible": true
+    }
+  },
+  "train_gt_center_windows_vs_test_gt_fid": 27.068429409358828,
+  "num_train_windows": 1758,
+  "checks": {
+    "fid_eig_vs_scipy_train_vs_test": [
+      27.068429409358828,
+      27.068429409233886
+    ],
+    "fid_gt_vs_gt": 7.480593922082335e-11
+  },
+  "recognizer": {
+    "path": "save/forecasting/ntu120_label/ntu2p_fid_recognizer_stgcn_s1/recognizer.pt",
+    "sha256": "87c9759fa23caf36475a0d1bd2f4cb310b07b8a48f1202664d898687cb38bf2c"
+  },
+  "created_at": "2026-11-26T06:15:18.091989Z"
+}
